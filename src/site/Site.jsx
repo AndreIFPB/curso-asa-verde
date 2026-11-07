@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import "./site.css";
 import { Cabecalho, Inicio } from "./Portal.jsx";
+import PhotoSpread from "./PhotoSpread.jsx";
 import {
   LINKS,
   CAPITULOS,
@@ -23,7 +24,7 @@ import {
   FICHA,
   ORIENTADORES,
 } from "./data.js";
-import { IconDownload, IconExternal, IconChart, IconClipboard, IconInstagram, IconCap, IconClose, IconPrev, IconNext } from "./icons.jsx";
+import { IconDownload, IconExternal, IconChart, IconClipboard, IconInstagram, IconCap, IconPrev, IconNext } from "./icons.jsx";
 
 const ext = { target: "_blank", rel: "noopener noreferrer" };
 const fmt = (n) => n.toLocaleString("pt-BR");
@@ -105,26 +106,16 @@ function Foto({ f, className = "", eager }) {
   );
 }
 
-/* Cabeçalho de capítulo: linha corrida, título e numeral vazado na margem. */
 function Abertura({ nome, titulo, lead, children, claro }) {
-  const [ref, vis] = useInView();
   return (
-    <header ref={ref} className={`ab${vis ? " in" : ""}${claro ? " ab--claro" : ""}`}>
-      <p className="ab-run">
-        <span>Capítulo {n}</span>
-        <span>{nome}</span>
-      </p>
+    <header className={`ab in${claro ? " ab--claro" : ""}`}>
+      <p className="ab-run">{nome}</p>
       <h1 className="ab-tit">{titulo}</h1>
       {lead && <p className="ab-lead">{lead}</p>}
       {children}
-      <span className="ab-num" aria-hidden="true">
-        {n}
-      </span>
     </header>
   );
 }
-
-/* ───────────────────────── topo e trilho ───────────────────────── */
 
 function Realizacao() {
   return (
@@ -760,94 +751,16 @@ function Vozes() {
 /* ───────────────────────── 07 · Galeria ───────────────────────── */
 
 function Galeria() {
-  const [atual, setAtual] = useState(-1);
-  const [prog, setProg] = useState(0);
-  const faixa = useRef(null);
-  const dlg = useRef(null);
-
-  useEffect(() => {
-    const d = dlg.current;
-    if (!d) return;
-    if (atual >= 0 && !d.open) d.showModal();
-    if (atual < 0 && d.open) d.close();
-  }, [atual]);
-
-  const onScroll = useCallback(() => {
-    const el = faixa.current;
-    if (!el) return;
-    const max = el.scrollWidth - el.clientWidth;
-    setProg(max > 0 ? el.scrollLeft / max : 0);
-  }, []);
-
-  const rolar = (dir) => {
-    const el = faixa.current;
-    if (!el) return;
-    el.scrollBy({ left: dir * el.clientWidth * 0.8, behavior: "smooth" });
-  };
-
-  const mover = (passo) => setAtual((i) => (i + passo + GALERIA.length) % GALERIA.length);
-  const foto = atual >= 0 ? GALERIA[atual] : null;
-
   return (
-    <section className="ch ch--galeria" id="galeria" aria-labelledby="gal-tit">
-      <div className="wrap">
-        <Abertura nome="Galeria" titulo={<span id="gal-tit">Momentos do ciclo 2026</span>} lead="Registros das equipes de estagiários e da equipe de Mídia. Deslize para o lado ou toque em uma foto para ampliá-la." />
+    <section className="ch gallery-page" id="galeria" aria-labelledby="gal-tit">
+      <div className="shell">
+        <Abertura nome="Acervo fotográfico · 2026" titulo={<span id="gal-tit">As escolas em imagens</span>}
+          lead="Das rodas de conversa ao plantio, os registros das equipes mostram de perto o trabalho com as turmas. Selecione uma fotografia para vê-la por inteiro." />
+        <PhotoSpread photos={GALERIA} layout="archive" />
       </div>
-
-      <div className="faixa-wrap">
-        <ul className="faixa" ref={faixa} onScroll={onScroll} tabIndex={0} aria-label="Fotos do ciclo 2026">
-          {GALERIA.map((f, i) => (
-            <li key={f.src} style={{ "--ar": `${f.w} / ${f.h}` }}>
-              <button type="button" onClick={() => setAtual(i)} aria-label={`Ampliar foto: ${f.alt}`}>
-                <Img src={f.src} w={f.w} h={f.h} alt="" />
-              </button>
-              <span className="faixa-leg">
-                <span className="faixa-i">{String(i + 1).padStart(2, "0")}</span>
-                {f.legenda}
-              </span>
-            </li>
-          ))}
-        </ul>
-        <div className="wrap faixa-ctl">
-          <span className="faixa-prog" aria-hidden="true">
-            <i style={{ "--p": prog }} />
-          </span>
-          <button type="button" className="deck-btn deck-btn--tinta" onClick={() => rolar(-1)} aria-label="Fotos anteriores">
-            <IconPrev />
-          </button>
-          <button type="button" className="deck-btn deck-btn--tinta" onClick={() => rolar(1)} aria-label="Próximas fotos">
-            <IconNext />
-          </button>
-        </div>
-      </div>
-
-      <dialog ref={dlg} className="lightbox" aria-label="Foto ampliada" onClose={() => setAtual(-1)} onKeyDown={(e) => (e.key === "ArrowRight" ? mover(1) : e.key === "ArrowLeft" ? mover(-1) : null)} onClick={(e) => e.target === dlg.current && setAtual(-1)}>
-        {foto && (
-          <figure>
-            <img src={foto.src} width={foto.w} height={foto.h} alt={foto.alt} />
-            <figcaption>
-              <span>{foto.legenda}</span>
-              <span className="lb-cont">
-                {atual + 1} / {GALERIA.length}
-              </span>
-            </figcaption>
-          </figure>
-        )}
-        <button type="button" className="lb-btn lb-fechar" onClick={() => setAtual(-1)} aria-label="Fechar">
-          <IconClose />
-        </button>
-        <button type="button" className="lb-btn lb-ant" onClick={() => mover(-1)} aria-label="Foto anterior">
-          <IconPrev />
-        </button>
-        <button type="button" className="lb-btn lb-prox" onClick={() => mover(1)} aria-label="Próxima foto">
-          <IconNext />
-        </button>
-      </dialog>
     </section>
   );
 }
-
-/* ───────────────────────── 08 · Imprensa ───────────────────────── */
 
 function Selo() {
   return (
@@ -1100,8 +1013,9 @@ function Rodape({ onFormacao }) {
           <div>
             <h2 className="rod-tit">Realização</h2>
             <p><a href="#equipe">Conheça a equipe</a></p>
-            <p>Ministério Público da Paraíba, Prefeitura Municipal de Santa Rita e Instituto Federal da Paraíba – Campus Santa Rita.</p>
-            <p>Apoio: Secretaria Municipal de Meio Ambiente (SEMMA) e COOREMM.</p>
+            <p>{PARCEIROS.realizacao.map(p => p.nome).join(" · ")}</p>
+            <h2 className="rod-tit rod-support">Apoio</h2>
+            <p>{PARCEIROS.apoio.map(p => p.nome).join(" · ")}</p>
           </div>
         </div>
         <p className="rod-base">
@@ -1126,11 +1040,11 @@ function subscribeHash(update) {
 }
 
 function readHash() {
-  return window.location.hash.slice(1) || "inicio";
+  return typeof window === "undefined" ? "inicio" : window.location.hash.slice(1) || "inicio";
 }
 
 export default function Site({ navigate }) {
-  const hash = useSyncExternalStore(subscribeHash, readHash);
+  const hash = useSyncExternalStore(subscribeHash, readHash, readHash);
   const page = fieldSections.has(hash) ? "eixos" : hash;
   const Chapter = Object.hasOwn(chapters, page) ? chapters[page] : null;
   const title = CAPITULOS.find(c => c.id === page)?.nome || "Quem faz o Asa Verde";

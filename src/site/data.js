@@ -20,7 +20,7 @@ export const CAPITULOS = [
   { id: "projeto", n: "01", nome: "O projeto" },
   { id: "numeros", n: "02", nome: "Em números" },
   { id: "eixos", n: "03", nome: "Eixos de atuação" },
-  { id: "territorio", n: "04", nome: "Território" },
+  { id: "territorio", n: "04", nome: "Resultados por unidade" },
   { id: "tempo", n: "05", nome: "Linha do tempo" },
   { id: "vozes", n: "06", nome: "Vozes" },
   { id: "galeria", n: "07", nome: "Galeria" },
@@ -336,7 +336,7 @@ export const RELATORIOS = [
     titulo: "Relatório de Impacto 2025",
     periodo: "Junho a dezembro de 2025",
     descricao:
-      "O primeiro ciclo do projeto em 10 escolas municipais, com 60 estagiários, a implantação da coleta seletiva e a destinação de 2.322,5 kg de recicláveis à COOREMM.",
+      "O primeiro ciclo do projeto em 10 escolas municipais, com 60 estagiários, a implantação da coleta seletiva e a destinação de 2.322,5 kg de recicláveis à COREMM.",
     paginas: "16 páginas",
     tamanho: "1,8 MB",
     capa: "/relatorios/capa-2025.webp",
@@ -354,11 +354,11 @@ export const PARCEIROS = {
   realizacao: [
     { nome: "Ministério Público da Paraíba", logo: "/logos/mppb.webp", w: 499, h: 185 },
     { nome: "Prefeitura Municipal de Santa Rita", logo: "/logos/santarita.webp", w: 307, h: 240 },
+    { nome: "Secretaria Municipal de Meio Ambiente de Santa Rita (SEMMA)", logo: "/logos/semma.webp", w: 465, h: 240 },
     { nome: "Instituto Federal da Paraíba – Campus Santa Rita", logo: "/logos/ifpb.webp", w: 170, h: 240 },
   ],
   apoio: [
-    { nome: "Secretaria Municipal de Meio Ambiente de Santa Rita (SEMMA)", logo: "/logos/semma.webp", w: 465, h: 240 },
-    { nome: "Cooperativa de Trabalho dos Catadores e Catadoras de Reciclagem de Marcos Moura (COOREMM)", logo: "/logos/cooremm.webp", w: 491, h: 240 },
+    { nome: "Cooperativa de Trabalho dos Catadores e Catadoras de Reciclagem de Marcos Moura (COREMM)", logo: "/logos/cooremm.webp", w: 491, h: 240 },
   ],
 };
 

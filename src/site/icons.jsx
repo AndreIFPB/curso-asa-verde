@@ -84,3 +84,19 @@ export const IconNext = (p) => (
     <path d="m9 5 7 7-7 7" />
   </svg>
 );
+
+export const IconArrow = (p) => (
+  <svg {...base} {...p}><path d="M4 12h15m-6-6 6 6-6 6" /></svg>
+);
+
+const fieldShapes = {
+  pin: <><path d="M19 10c0 5-7 11-7 11S5 15 5 10a7 7 0 1 1 14 0Z" /><circle cx="12" cy="10" r="2.4" /></>,
+  school: <><path d="m3 10 9-7 9 7M5 9v11h14V9M9.5 20v-5h5v5M3 20h18" /><circle cx="12" cy="9.5" r="1.5" /></>,
+  people: <><circle cx="9" cy="8" r="3" /><path d="M3 20v-2a6 6 0 0 1 12 0v2M16 5a3 3 0 0 1 0 6m2 3a5 5 0 0 1 3 4v2" /></>,
+  book: <><path d="M12 6c-3-2-6-2-9-1v14c3-1 6-1 9 1 3-2 6-2 9-1V5c-3-1-6-1-9 1Zm0 0v14M6 9l3 1m6 0 3-1" /></>,
+  plant: <><path d="M12 21v-7c0-6 3-10 9-11 0 6-2 11-9 11Zm0 3C6 17 3 13 3 7c5 0 8 3 9 7M7 21h10" /></>,
+};
+
+export function FieldIcon({ type }) {
+  return <svg {...base}>{fieldShapes[type]}</svg>;
+}

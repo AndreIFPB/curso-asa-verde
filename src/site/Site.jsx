@@ -1,14 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import "@fontsource-variable/bricolage-grotesque/standard.css";
-import "@fontsource-variable/newsreader/opsz.css";
-import "@fontsource-variable/newsreader/opsz-italic.css";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import "./site.css";
+import { Cabecalho, Inicio } from "./Portal.jsx";
 import {
   LINKS,
   CAPITULOS,
   PARCEIROS,
   PAPEIS,
-  DESTAQUES,
   NUMEROS,
   MATRIZ,
   EVOLUCAO,
@@ -26,7 +23,7 @@ import {
   FICHA,
   ORIENTADORES,
 } from "./data.js";
-import { IconDownload, IconExternal, IconChart, IconClipboard, IconInstagram, IconCap, IconMenu, IconClose, IconPrev, IconNext } from "./icons.jsx";
+import { IconDownload, IconExternal, IconChart, IconClipboard, IconInstagram, IconCap, IconClose, IconPrev, IconNext } from "./icons.jsx";
 
 const ext = { target: "_blank", rel: "noopener noreferrer" };
 const fmt = (n) => n.toLocaleString("pt-BR");
@@ -109,7 +106,7 @@ function Foto({ f, className = "", eager }) {
 }
 
 /* Cabeçalho de capítulo: linha corrida, título e numeral vazado na margem. */
-function Abertura({ n, nome, titulo, lead, children, claro }) {
+function Abertura({ nome, titulo, lead, children, claro }) {
   const [ref, vis] = useInView();
   return (
     <header ref={ref} className={`ab${vis ? " in" : ""}${claro ? " ab--claro" : ""}`}>
@@ -117,7 +114,7 @@ function Abertura({ n, nome, titulo, lead, children, claro }) {
         <span>Capítulo {n}</span>
         <span>{nome}</span>
       </p>
-      <h2 className="ab-tit">{titulo}</h2>
+      <h1 className="ab-tit">{titulo}</h1>
       {lead && <p className="ab-lead">{lead}</p>}
       {children}
       <span className="ab-num" aria-hidden="true">
@@ -128,134 +125,6 @@ function Abertura({ n, nome, titulo, lead, children, claro }) {
 }
 
 /* ───────────────────────── topo e trilho ───────────────────────── */
-
-function Topo({ onFormacao, ativo }) {
-  const [aberto, setAberto] = useState(false);
-  const [rolou, setRolou] = useState(false);
-
-  useEffect(() => {
-    const on = () => setRolou(window.scrollY > window.innerHeight * 0.75);
-    on();
-    window.addEventListener("scroll", on, { passive: true });
-    return () => window.removeEventListener("scroll", on);
-  }, []);
-
-  useEffect(() => {
-    if (!aberto) return;
-    const onKey = (e) => e.key === "Escape" && setAberto(false);
-    window.addEventListener("keydown", onKey);
-    document.documentElement.style.overflow = "hidden";
-    return () => {
-      window.removeEventListener("keydown", onKey);
-      document.documentElement.style.overflow = "";
-    };
-  }, [aberto]);
-
-  return (
-    <>
-      <header className={`topo${rolou ? " topo--rolou" : ""}${aberto ? " topo--aberto" : ""}`}>
-        <a className="marca" href="#inicio" onClick={() => setAberto(false)}>
-          <img src="/logos/simbolo_white.webp" width="676" height="400" alt="" />
-          <span>Projeto Asa Verde</span>
-        </a>
-        <p className="topo-ed">Relatório de Impacto · Edição 2026</p>
-        <a className="topo-form" href="/formacao" onClick={onFormacao}>
-          <IconCap width="18" height="18" />
-          Área dos estagiários
-        </a>
-        <button type="button" className="menu-btn" aria-expanded={aberto} aria-controls="menu" onClick={() => setAberto((v) => !v)}>
-          {aberto ? <IconClose /> : <IconMenu />}
-          <span>{aberto ? "Fechar" : "Menu"}</span>
-        </button>
-      </header>
-
-      <nav id="menu" className={`menu${aberto ? " menu--aberto" : ""}`} aria-label="Capítulos" aria-hidden={!aberto}>
-        <ol>
-          {CAPITULOS.map((c) => (
-            <li key={c.id}>
-              <a href={`#${c.id}`} onClick={() => setAberto(false)} aria-current={ativo === c.id ? "true" : undefined}>
-                <span>{c.n}</span>
-                {c.nome}
-              </a>
-            </li>
-          ))}
-        </ol>
-        <a className="menu-form" href="/formacao" onClick={onFormacao}>
-          <IconCap />
-          Formação dos multiplicadores
-        </a>
-      </nav>
-
-      <nav className={`trilho${ativo ? " trilho--on" : ""}`} aria-label="Capítulos">
-        <ol>
-          {CAPITULOS.map((c) => (
-            <li key={c.id}>
-              <a href={`#${c.id}`} aria-current={ativo === c.id ? "true" : undefined}>
-                <span className="trilho-n">{c.n}</span>
-                <span className="trilho-nome">{c.nome}</span>
-              </a>
-            </li>
-          ))}
-        </ol>
-      </nav>
-    </>
-  );
-}
-
-/* ───────────────────────── abertura ───────────────────────── */
-
-function Capa() {
-  return (
-    <section className="capa" id="inicio" aria-labelledby="capa-tit">
-      <div className="capa-foto">
-        <Img src="/img/capa.webp" w={1216} h={1720} eager alt="Mãos de criança pintadas de verde carimbando um painel coletivo" />
-      </div>
-      <div className="capa-grid" aria-hidden="true">
-        <span />
-        <span />
-        <span />
-      </div>
-
-      <p className="capa-run">
-        <span>Santa Rita – PB</span>
-        <span>Educação ambiental nas escolas públicas</span>
-      </p>
-
-      <h1 className="capa-tit" id="capa-tit">
-        <span className="capa-l1">Projeto</span>
-        <span className="capa-l2">Asa Verde</span>
-      </h1>
-
-      <div className="capa-lado">
-        <p className="capa-lead">
-          Estudantes do IFPB formados como multiplicadores ambientais, presentes toda semana em 17 escolas e centros de educação infantil de Santa Rita.
-        </p>
-        <div className="capa-cta">
-          <a className="btn btn--lima" href={LINKS.relatorio2026} download={LINKS.arquivo2026}>
-            <IconDownload />
-            Baixar o relatório 2026
-          </a>
-          <a className="btn btn--fio" href="#numeros">
-            Ver os resultados
-          </a>
-        </div>
-      </div>
-
-      <p className="capa-lema" aria-hidden="true">
-        Transformando escolas. Semeando futuro.
-      </p>
-
-      <dl className="capa-fatos">
-        {DESTAQUES.map((d) => (
-          <div key={d.rotulo}>
-            <dt>{d.rotulo}</dt>
-            <dd>{fmt(d.valor)}</dd>
-          </div>
-        ))}
-      </dl>
-    </section>
-  );
-}
 
 function Realizacao() {
   return (
@@ -292,7 +161,7 @@ function Projeto() {
   return (
     <section className="ch" id="projeto" aria-labelledby="projeto-tit">
       <div className="wrap">
-        <Abertura n="01" nome="O projeto" titulo={<span id="projeto-tit">Escolas que se tornam núcleos vivos de educação ambiental</span>} />
+        <Abertura nome="O projeto" titulo={<span id="projeto-tit">Escolas que se tornam núcleos vivos de educação ambiental</span>} />
 
         <div className="proj">
           <div className="prosa prosa--2col">
@@ -452,7 +321,7 @@ function Numeros() {
   return (
     <section className="ch ch--noite" id="numeros" aria-labelledby="numeros-tit">
       <div className="wrap">
-        <Abertura claro n="02" nome="Em números" titulo={<span id="numeros-tit">Um ano de educação ambiental em escala</span>} lead="Abril a novembro de 2026. Dados consolidados em 7 de novembro." />
+        <Abertura claro nome="Em números" titulo={<span id="numeros-tit">Um ano de educação ambiental em escala</span>} lead="Abril a novembro de 2026. Dados consolidados em 7 de novembro." />
 
         <div className="heroi">
           <p className="heroi-n">
@@ -609,7 +478,7 @@ function Eixos() {
         ))}
       </div>
 
-      <div className="infantil">
+      <div className="infantil" id="infantil">
         <div className="wrap infantil-in">
           <Foto className="infantil-foto" f={{ src: "/img/inf-abraco.webp", w: 1050, h: 1400, alt: "Duas crianças se abraçando durante atividade em centro de educação infantil", legenda: "Centro de educação infantil, segundo semestre de 2026" }} />
           <div className="infantil-txt">
@@ -675,7 +544,7 @@ function Territorio() {
   return (
     <section className="ch" id="territorio" aria-labelledby="terr-tit">
       <div className="wrap">
-        <Abertura n="04" nome="Território" titulo={<span id="terr-tit">17 unidades em 8 bairros e localidades</span>} lead="Presença na zona urbana de Santa Rita e em Lerolândia, cerca de 18 km ao norte do centro." />
+        <Abertura nome="Território" titulo={<span id="terr-tit">17 unidades em 8 bairros e localidades</span>} lead="Presença na zona urbana de Santa Rita e em Lerolândia, cerca de 18 km ao norte do centro." />
 
         <div className="terr">
           <figure className="mapa">
@@ -687,6 +556,7 @@ function Territorio() {
                   type="button"
                   className={`mapa-pin${ativo === u.n ? " ativo" : ""}`}
                   style={{ "--x": `${u.x}%`, "--y": `${u.y}%` }}
+                  onClick={() => setAtivo(u.n)}
                   onMouseEnter={() => setAtivo(u.n)}
                   onMouseLeave={() => setAtivo(null)}
                   onFocus={() => setAtivo(u.n)}
@@ -700,7 +570,7 @@ function Territorio() {
                 </button>
               ))}
             </div>
-            <figcaption>Localização aproximada das unidades. Base cartográfica © OpenStreetMap contributors. Passe o cursor sobre um número para ver a unidade.</figcaption>
+            <figcaption>Localização aproximada das unidades. Base cartográfica © OpenStreetMap contributors. Selecione um número para identificar a unidade.</figcaption>
           </figure>
 
           <div className="unid-col">
@@ -779,7 +649,7 @@ function Tempo() {
   return (
     <section className="ch" id="tempo" aria-labelledby="tempo-tit">
       <div className="wrap">
-        <Abertura n="05" nome="Linha do tempo" titulo={<span id="tempo-tit">Os marcos do ciclo 2026</span>} lead="De abril a novembro: da abertura oficial às despedidas nas unidades." />
+        <Abertura nome="Linha do tempo" titulo={<span id="tempo-tit">Os marcos do ciclo 2026</span>} lead="De abril a novembro: da abertura oficial às despedidas nas unidades." />
         <ol className="meses">
           {MESES.map((m) => (
             <li key={m.mes} className="mes">
@@ -851,7 +721,7 @@ function Vozes() {
   return (
     <section className="ch ch--noite" id="vozes" aria-labelledby="vozes-tit">
       <div className="wrap">
-        <Abertura claro n="06" nome="Vozes" titulo={<span id="vozes-tit">O que ficou nas escolas</span>} lead="Relatos registrados pelas equipes de estagiários nos relatórios mensais." />
+        <Abertura claro nome="Vozes" titulo={<span id="vozes-tit">O que ficou nas escolas</span>} lead="Relatos registrados pelas equipes de estagiários nos relatórios mensais." />
 
         <div ref={ref} className="deck" onMouseEnter={() => setPausa(true)} onMouseLeave={() => setPausa(false)} onFocus={() => setPausa(true)} onBlur={() => setPausa(false)}>
           <figure className="deck-fig" aria-live="polite">
@@ -921,7 +791,7 @@ function Galeria() {
   return (
     <section className="ch ch--galeria" id="galeria" aria-labelledby="gal-tit">
       <div className="wrap">
-        <Abertura n="07" nome="Galeria" titulo={<span id="gal-tit">Momentos do ciclo 2026</span>} lead="Registros das equipes de estagiários e da equipe de Mídia. Deslize para o lado ou toque em uma foto para ampliá-la." />
+        <Abertura nome="Galeria" titulo={<span id="gal-tit">Momentos do ciclo 2026</span>} lead="Registros das equipes de estagiários e da equipe de Mídia. Deslize para o lado ou toque em uma foto para ampliá-la." />
       </div>
 
       <div className="faixa-wrap">
@@ -1008,7 +878,7 @@ function Imprensa() {
   return (
     <section className="ch" id="imprensa" aria-labelledby="imp-tit">
       <div className="wrap">
-        <Abertura n="08" nome="Imprensa" titulo={<span id="imp-tit">O Asa Verde na imprensa</span>} lead="Notícias publicadas sobre o projeto por parceiros e veículos de comunicação." />
+        <Abertura nome="Imprensa" titulo={<span id="imp-tit">O Asa Verde na imprensa</span>} lead="Notícias publicadas sobre o projeto por parceiros e veículos de comunicação." />
 
         <div className="imp">
           <ol className="noticias">
@@ -1057,7 +927,7 @@ function Relatorios({ onFormacao }) {
   return (
     <section className="ch ch--rel" id="relatorios" aria-labelledby="rel-tit">
       <div className="wrap">
-        <Abertura n="09" nome="Relatórios" titulo={<span id="rel-tit">Relatórios de impacto</span>} lead="Os relatórios prestam contas aos entes parceiros e à sociedade sobre as ações executadas em cada ciclo. Baixe a versão completa ou consulte os dados no painel público." />
+        <Abertura nome="Relatórios" titulo={<span id="rel-tit">Relatórios de impacto</span>} lead="Os relatórios prestam contas aos entes parceiros e à sociedade sobre as ações executadas em cada ciclo. Baixe a versão completa ou consulte os dados no painel público." />
 
         <div className="livros">
           {RELATORIOS.map((r, i) => (
@@ -1128,9 +998,9 @@ function Equipe() {
       <div className="wrap">
         <Foto className="eq-foto" f={{ src: "/img/equipe.webp", w: 2200, h: 1237, alt: "Estagiários, professores e coordenação do Projeto Asa Verde reunidos", legenda: "Estagiários, professores orientadores e coordenação do ciclo 2026" }} />
         <div className="eq-cab">
-          <h2 className="eq-tit" id="eq-tit">
+          <h1 className="eq-tit" id="eq-tit">
             Quem faz o Asa Verde
-          </h2>
+          </h1>
           <div className="prosa">
             <p>
               104 estudantes dos cursos técnicos integrados de Meio Ambiente e Informática do IFPB – Campus Santa Rita atuaram no ciclo 2026: 84 nas equipes das unidades e 20 nas equipes de Planejamento
@@ -1174,19 +1044,19 @@ function Rodape({ onFormacao }) {
   return (
     <footer className="rod">
       <div className="wrap">
-        <p className="rod-lema">A educação ambiental planta hoje o mundo que queremos amanhã.</p>
         <div className="rod-cols">
           <div className="rod-marca">
             <img src="/logos/asaverde_white.webp" width="692" height="400" alt="Projeto Asa Verde" loading="lazy" />
             <p>Santa Rita – PB · Educação ambiental nas escolas públicas desde 2025.</p>
           </div>
           <div>
-            <h2 className="rod-tit">Capítulos</h2>
+            <h2 className="rod-tit">Explore o projeto</h2>
             <ol>
+              <li><a href="#inicio">Início</a></li>
               {CAPITULOS.map((c) => (
                 <li key={c.id}>
                   <a href={`#${c.id}`}>
-                    <span>{c.n}</span> {c.nome}
+                    {c.nome}
                   </a>
                 </li>
               ))}
@@ -1229,6 +1099,7 @@ function Rodape({ onFormacao }) {
           </div>
           <div>
             <h2 className="rod-tit">Realização</h2>
+            <p><a href="#equipe">Conheça a equipe</a></p>
             <p>Ministério Público da Paraíba, Prefeitura Municipal de Santa Rita e Instituto Federal da Paraíba – Campus Santa Rita.</p>
             <p>Apoio: Secretaria Municipal de Meio Ambiente (SEMMA) e COOREMM.</p>
           </div>
@@ -1245,49 +1116,54 @@ function Rodape({ onFormacao }) {
 
 /* ───────────────────────── Página ───────────────────────── */
 
+const chapters = { projeto: Projeto, numeros: Numeros, eixos: Eixos, territorio: Territorio,
+  tempo: Tempo, vozes: Vozes, galeria: Galeria, imprensa: Imprensa, relatorios: Relatorios, equipe: Equipe };
+const fieldSections = new Set([...EIXOS.map(e => e.id), "infantil"]);
+
+function subscribeHash(update) {
+  window.addEventListener("hashchange", update);
+  return () => window.removeEventListener("hashchange", update);
+}
+
+function readHash() {
+  return window.location.hash.slice(1) || "inicio";
+}
+
 export default function Site({ navigate }) {
-  const [ativo, setAtivo] = useState(null);
+  const hash = useSyncExternalStore(subscribeHash, readHash);
+  const page = fieldSections.has(hash) ? "eixos" : hash;
+  const Chapter = Object.hasOwn(chapters, page) ? chapters[page] : null;
+  const title = CAPITULOS.find(c => c.id === page)?.nome || "Quem faz o Asa Verde";
+  const content = useRef(null);
 
-  useEffect(() => {
-    const secs = CAPITULOS.map((c) => document.getElementById(c.id)).filter(Boolean);
-    if (!secs.length || !("IntersectionObserver" in window)) return;
-    const io = new IntersectionObserver(
-      (es) => {
-        es.forEach((e) => {
-          if (e.isIntersecting) setAtivo(e.target.id);
-        });
-      },
-      { rootMargin: "-40% 0px -55% 0px", threshold: 0 }
-    );
-    secs.forEach((s) => io.observe(s));
-    return () => io.disconnect();
-  }, []);
+  useLayoutEffect(() => {
+    const target = (hash === "impacto" || fieldSections.has(hash)) && document.getElementById(hash);
+    if (target) target.scrollIntoView({ behavior: "instant", block: "start" });
+    else window.scrollTo({ top: 0, behavior: "instant" });
+    if (window.location.hash) content.current?.focus({ preventScroll: true });
+  }, [hash]);
 
-  const onFormacao = (e) => {
-    if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return;
-    e.preventDefault();
+  const onFormacao = (event) => {
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;
+    event.preventDefault();
     navigate("/formacao");
   };
 
   return (
-    <div className="pg">
-      <a className="pular" href="#conteudo">
-        Pular para o conteúdo
-      </a>
-      <Topo onFormacao={onFormacao} ativo={ativo} />
-      <main id="conteudo">
-        <Capa />
+    <div className="pg" id="inicio">
+      <a className="pular" href="#conteudo" onClick={(event) => {
+        event.preventDefault();
+        content.current?.focus();
+      }}>Pular para o conteúdo</a>
+      <Cabecalho key={hash} onFormacao={onFormacao} selected={page} />
+      <main id="conteudo" ref={content} tabIndex={-1}>
+        {Chapter ? (
+          <div className="chapter-view">
+            <nav className="shell breadcrumb" aria-label="Caminho da página"><a href="#inicio">Início</a><IconNext /><span aria-current="page">{title}</span></nav>
+            <Chapter key={page} onFormacao={onFormacao} />
+          </div>
+        ) : <Inicio />}
         <Realizacao />
-        <Projeto />
-        <Numeros />
-        <Eixos />
-        <Territorio />
-        <Tempo />
-        <Vozes />
-        <Galeria />
-        <Imprensa />
-        <Relatorios onFormacao={onFormacao} />
-        <Equipe />
       </main>
       <Rodape onFormacao={onFormacao} />
     </div>

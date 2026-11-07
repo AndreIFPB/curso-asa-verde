@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { CAPITULOS, DESTAQUES, EIXOS, EVOLUCAO, GALERIA, INFANTIL, LINKS, RELATORIOS, VOZES } from "./data.js";
-import { IconArrow, IconCap, IconClose, IconDownload, IconMenu } from "./icons.jsx";
+import { IconArrow, IconCap, IconChart, IconClipboard, IconClose, IconDownload, IconExternal, IconMenu } from "./icons.jsx";
 import PhotoSpread from "./PhotoSpread.jsx";
 import "./portal.css";
 
 const primaryLinks = [["galeria", "Fotografias"], ["impacto", "Impacto"], ["vozes", "Vozes"], ["relatorios", "Relatórios"]];
 const format = new Intl.NumberFormat("pt-BR");
 
-export function Cabecalho({ onFormacao, selected }) {
+export function Cabecalho({ selected }) {
   const [open, setOpen] = useState(false);
   const header = useRef(null);
   const toggle = useRef(null);
@@ -42,7 +42,7 @@ export function Cabecalho({ onFormacao, selected }) {
           {primaryLinks.map(([id, name]) => <a key={id} href={`#${id}`} aria-current={selected === id ? "page" : undefined}>{name}</a>)}
         </nav>
         <div className="mast-tools">
-          <a className="training" href="/formacao" onClick={onFormacao}><IconCap /> Área do estagiário</a>
+          <a className="training" href="#estagiario" aria-current={selected === "estagiario" ? "page" : undefined}><IconCap /> Área do estagiário</a>
           <button type="button" ref={toggle} className="menu-toggle" aria-label={open ? "Fechar menu" : "Abrir menu de navegação"} aria-expanded={open} aria-controls="all-links" onClick={() => setOpen(!open)}>{open ? <IconClose /> : <IconMenu />}</button>
         </div>
       </div>
@@ -50,9 +50,36 @@ export function Cabecalho({ onFormacao, selected }) {
         <a href="#inicio">Início <IconArrow /></a>
         {CAPITULOS.map(c => <a key={c.id} href={`#${c.id}`}>{c.nome} <IconArrow /></a>)}
         <a href="#equipe">Quem faz o Asa Verde <IconArrow /></a>
-        <a href="/formacao" onClick={onFormacao}>Formação dos estagiários <IconCap /></a>
+        <a href="#estagiario">Área do estagiário <IconCap /></a>
       </nav>}
     </header>
+  );
+}
+
+export function AreaEstagiario({ onFormacao }) {
+  return (
+    <section className="shell intern-area" aria-labelledby="intern-title">
+      <h1 id="intern-title">Área do estagiário</h1>
+      <div className="intern-choices">
+        <article>
+          <IconCap />
+          <h2>Curso de formação</h2>
+          <p>Acesse os módulos de formação dos multiplicadores e faça as avaliações do curso.</p>
+          <a className="btn btn--tinta" href="/formacao" onClick={onFormacao}>Acessar o curso <IconArrow /></a>
+        </article>
+        <article>
+          <IconClipboard />
+          <h2>Registro de atividades</h2>
+          <p>Registre as ações da sua unidade, informe a turma e os participantes e inclua as evidências da atividade.</p>
+          <a className="btn btn--tinta" href={LINKS.sistema} target="_blank" rel="noopener noreferrer">Registrar atividades <IconExternal /></a>
+        </article>
+      </div>
+      <aside className="intern-panel">
+        <div><h2>Painel do projeto no Power BI</h2>
+          <p>Consulte os indicadores do ciclo de 2026 a partir das atividades registradas pelas equipes.</p></div>
+        <a className="underlink" href={LINKS.powerbi2026} target="_blank" rel="noopener noreferrer">Abrir painel de 2026 <IconExternal /></a>
+      </aside>
+    </section>
   );
 }
 
@@ -125,7 +152,12 @@ function Impacto() {
           </dl>
         </div>
         <div className="source-line">
-          <p>{current ? "Relatório de 2026 · Dados consolidados em 7 de novembro." : "Relatório de 2025 · Junho a dezembro."}</p>
+          <div>
+            <p>{current ? "Relatório de 2026 · Dados consolidados em 7 de novembro." : "Relatório de 2025 · Junho a dezembro."}</p>
+            <a className="btn btn--tinta source-panel" href={current ? LINKS.powerbi2026 : LINKS.powerbi2025} target="_blank" rel="noopener noreferrer">
+              <IconChart /> Fonte dos dados · Power BI {year} <IconExternal width="16" height="16" />
+            </a>
+          </div>
           <a className="underlink" href="#numeros">Comparar os dois ciclos <IconArrow /></a>
         </div>
       </div>

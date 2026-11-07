@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import "./site.css";
-import { Cabecalho, Inicio } from "./Portal.jsx";
+import { AreaEstagiario, Cabecalho, Inicio } from "./Portal.jsx";
 import PhotoSpread from "./PhotoSpread.jsx";
 import {
   LINKS,
@@ -1031,7 +1031,7 @@ function Rodape({ onFormacao }) {
 /* ───────────────────────── Página ───────────────────────── */
 
 const chapters = { projeto: Projeto, numeros: Numeros, eixos: Eixos, territorio: Territorio,
-  tempo: Tempo, vozes: Vozes, galeria: Galeria, imprensa: Imprensa, relatorios: Relatorios, equipe: Equipe };
+  tempo: Tempo, vozes: Vozes, galeria: Galeria, imprensa: Imprensa, relatorios: Relatorios, equipe: Equipe, estagiario: AreaEstagiario };
 const fieldSections = new Set([...EIXOS.map(e => e.id), "infantil"]);
 
 function subscribeHash(update) {
@@ -1047,7 +1047,7 @@ export default function Site({ navigate }) {
   const hash = useSyncExternalStore(subscribeHash, readHash, readHash);
   const page = fieldSections.has(hash) ? "eixos" : hash;
   const Chapter = Object.hasOwn(chapters, page) ? chapters[page] : null;
-  const title = CAPITULOS.find(c => c.id === page)?.nome || "Quem faz o Asa Verde";
+  const title = page === "estagiario" ? "Área do estagiário" : CAPITULOS.find(c => c.id === page)?.nome || "Quem faz o Asa Verde";
   const content = useRef(null);
 
   useLayoutEffect(() => {
@@ -1069,7 +1069,7 @@ export default function Site({ navigate }) {
         event.preventDefault();
         content.current?.focus();
       }}>Pular para o conteúdo</a>
-      <Cabecalho key={hash} onFormacao={onFormacao} selected={page} />
+      <Cabecalho key={hash} selected={page} />
       <main id="conteudo" ref={content} tabIndex={-1}>
         {Chapter ? (
           <div className="chapter-view">

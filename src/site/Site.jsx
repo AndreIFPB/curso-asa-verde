@@ -1,21 +1,24 @@
-import { useEffect, useRef, useState } from "react";
-import "@fontsource-variable/archivo/wdth.css";
-import "@fontsource-variable/archivo/wdth-italic.css";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import "@fontsource-variable/bricolage-grotesque/standard.css";
+import "@fontsource-variable/newsreader/opsz.css";
+import "@fontsource-variable/newsreader/opsz-italic.css";
 import "./site.css";
 import {
   LINKS,
-  NAV,
+  CAPITULOS,
   PARCEIROS,
   PAPEIS,
   DESTAQUES,
   NUMEROS,
+  MATRIZ,
   EVOLUCAO,
   ETAPAS,
   EIXOS,
   INFANTIL,
-  ESCOLAS,
-  CIEIS,
-  LINHA_DO_TEMPO,
+  UNIDADES,
+  RESULTADOS_UNIDADES,
+  COLUNAS_RESULTADOS,
+  MESES,
   VOZES,
   GALERIA,
   IMPRENSA,
@@ -23,253 +26,446 @@ import {
   FICHA,
   ORIENTADORES,
 } from "./data.js";
-import {
-  IconDownload,
-  IconExternal,
-  IconChart,
-  IconClipboard,
-  IconInstagram,
-  IconCap,
-  IconMenu,
-  IconClose,
-  IconPrev,
-  IconNext,
-} from "./icons.jsx";
+import { IconDownload, IconExternal, IconChart, IconClipboard, IconInstagram, IconCap, IconMenu, IconClose, IconPrev, IconNext } from "./icons.jsx";
 
 const ext = { target: "_blank", rel: "noopener noreferrer" };
+const fmt = (n) => n.toLocaleString("pt-BR");
 
-function Img({ src, w, h, alt = "", className, eager, sizes, style }) {
+/* ───────────────────────── utilidades ───────────────────────── */
+
+function usePrefersReducedMotion() {
+  const [r, setR] = useState(() => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const on = () => setR(mq.matches);
+    mq.addEventListener("change", on);
+    return () => mq.removeEventListener("change", on);
+  }, []);
+  return r;
+}
+
+// Marca o elemento com a classe "in" na primeira vez que entra na tela.
+const temIO = typeof window !== "undefined" && "IntersectionObserver" in window;
+
+function useInView(margin = "0px 0px -12% 0px") {
+  const ref = useRef(null);
+  const [vis, setVis] = useState(!temIO);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || !temIO) return;
+    const io = new IntersectionObserver(
+      (es) => {
+        if (es.some((e) => e.isIntersecting)) {
+          setVis(true);
+          io.disconnect();
+        }
+      },
+      { rootMargin: margin, threshold: 0.05 }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [margin]);
+  return [ref, vis];
+}
+
+function Contador({ valor, duracao = 1400 }) {
+  const [ref, vis] = useInView("0px 0px -8% 0px");
+  const reduz = usePrefersReducedMotion();
+  const [v, setV] = useState(0);
+  useEffect(() => {
+    if (!vis || reduz) return;
+    let raf;
+    const t0 = performance.now();
+    const tick = (t) => {
+      const p = Math.min(1, (t - t0) / duracao);
+      const e = 1 - Math.pow(1 - p, 3);
+      setV(Math.round(valor * e));
+      if (p < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [vis, valor, duracao, reduz]);
+  const mostrado = !vis ? 0 : reduz ? valor : v;
   return (
-    <img
-      src={src}
-      width={w}
-      height={h}
-      alt={alt}
-      className={className}
-      loading={eager ? "eager" : "lazy"}
-      fetchPriority={eager ? "high" : undefined}
-      decoding="async"
-      sizes={sizes}
-      style={style}
-    />
+    <span ref={ref} className="num">
+      {fmt(mostrado)}
+    </span>
   );
 }
 
-/* ───────────────────────── Cabeçalho ───────────────────────── */
+function Img({ src, w, h, alt = "", className, eager, style }) {
+  return (
+    <img src={src} width={w} height={h} alt={alt} className={className} loading={eager ? "eager" : "lazy"} fetchPriority={eager ? "high" : undefined} decoding="async" style={style} />
+  );
+}
 
-function Header({ onFormacao }) {
+function Foto({ f, className = "", eager }) {
+  return (
+    <figure className={`foto ${className}`}>
+      <Img src={f.src} w={f.w} h={f.h} alt={f.alt} eager={eager} />
+      {f.legenda && <figcaption>{f.legenda}</figcaption>}
+    </figure>
+  );
+}
+
+/* Cabeçalho de capítulo: linha corrida, título e numeral vazado na margem. */
+function Abertura({ n, nome, titulo, lead, children, claro }) {
+  const [ref, vis] = useInView();
+  return (
+    <header ref={ref} className={`ab${vis ? " in" : ""}${claro ? " ab--claro" : ""}`}>
+      <p className="ab-run">
+        <span>Capítulo {n}</span>
+        <span>{nome}</span>
+      </p>
+      <h2 className="ab-tit">{titulo}</h2>
+      {lead && <p className="ab-lead">{lead}</p>}
+      {children}
+      <span className="ab-num" aria-hidden="true">
+        {n}
+      </span>
+    </header>
+  );
+}
+
+/* ───────────────────────── topo e trilho ───────────────────────── */
+
+function Topo({ onFormacao, ativo }) {
   const [aberto, setAberto] = useState(false);
   const [rolou, setRolou] = useState(false);
 
   useEffect(() => {
-    const onScroll = () => setRolou(window.scrollY > 24);
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
+    const on = () => setRolou(window.scrollY > window.innerHeight * 0.75);
+    on();
+    window.addEventListener("scroll", on, { passive: true });
+    return () => window.removeEventListener("scroll", on);
   }, []);
 
   useEffect(() => {
     if (!aberto) return;
     const onKey = (e) => e.key === "Escape" && setAberto(false);
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    document.documentElement.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.documentElement.style.overflow = "";
+    };
   }, [aberto]);
 
   return (
-    <header className={`hdr${rolou ? " hdr--rolou" : ""}${aberto ? " hdr--aberto" : ""}`}>
-      <div className="wrap hdr-in">
+    <>
+      <header className={`topo${rolou ? " topo--rolou" : ""}${aberto ? " topo--aberto" : ""}`}>
         <a className="marca" href="#inicio" onClick={() => setAberto(false)}>
           <img src="/logos/simbolo_white.webp" width="676" height="400" alt="" />
-          <span>
-            Projeto
-            <br />
-            Asa Verde
-          </span>
+          <span>Projeto Asa Verde</span>
         </a>
-
-        <button
-          type="button"
-          className="menu-btn"
-          aria-expanded={aberto}
-          aria-controls="menu-principal"
-          onClick={() => setAberto((v) => !v)}
-        >
+        <p className="topo-ed">Relatório de Impacto · Edição 2026</p>
+        <a className="topo-form" href="/formacao" onClick={onFormacao}>
+          <IconCap width="18" height="18" />
+          Área dos estagiários
+        </a>
+        <button type="button" className="menu-btn" aria-expanded={aberto} aria-controls="menu" onClick={() => setAberto((v) => !v)}>
           {aberto ? <IconClose /> : <IconMenu />}
           <span>{aberto ? "Fechar" : "Menu"}</span>
         </button>
+      </header>
 
-        <nav id="menu-principal" className="nav" aria-label="Seções do site">
-          <ul>
-            {NAV.map((n) => (
-              <li key={n.href}>
-                <a href={n.href} onClick={() => setAberto(false)}>
-                  {n.label}
-                </a>
-              </li>
-            ))}
-          </ul>
-          <a className="btn btn--lima btn--sm nav-formacao" href="/formacao" onClick={onFormacao}>
-            <IconCap />
-            Formação dos multiplicadores
-          </a>
-        </nav>
-      </div>
-    </header>
+      <nav id="menu" className={`menu${aberto ? " menu--aberto" : ""}`} aria-label="Capítulos" aria-hidden={!aberto}>
+        <ol>
+          {CAPITULOS.map((c) => (
+            <li key={c.id}>
+              <a href={`#${c.id}`} onClick={() => setAberto(false)} aria-current={ativo === c.id ? "true" : undefined}>
+                <span>{c.n}</span>
+                {c.nome}
+              </a>
+            </li>
+          ))}
+        </ol>
+        <a className="menu-form" href="/formacao" onClick={onFormacao}>
+          <IconCap />
+          Formação dos multiplicadores
+        </a>
+      </nav>
+
+      <nav className="trilho" aria-label="Capítulos">
+        <ol>
+          {CAPITULOS.map((c) => (
+            <li key={c.id}>
+              <a href={`#${c.id}`} aria-current={ativo === c.id ? "true" : undefined}>
+                <span className="trilho-n">{c.n}</span>
+                <span className="trilho-nome">{c.nome}</span>
+              </a>
+            </li>
+          ))}
+        </ol>
+      </nav>
+    </>
   );
 }
 
-/* ───────────────────────── Abertura ───────────────────────── */
+/* ───────────────────────── abertura ───────────────────────── */
 
-function Hero() {
+function Capa() {
   return (
-    <section className="hero" id="inicio" aria-labelledby="hero-titulo">
-      <div className="hero-txt">
-        <p className="hero-edicao">Santa Rita – PB, ciclo 2026</p>
-        <h1 className="hero-titulo" id="hero-titulo">
-          <span className="hero-l1">Projeto</span>
-          <span className="hero-l2">Asa Verde</span>
-        </h1>
-        <p className="hero-lead">
-          Educação ambiental nas escolas e nos centros de educação infantil de Santa Rita, com
-          estudantes do IFPB atuando como multiplicadores ambientais.
+    <section className="capa" id="inicio" aria-labelledby="capa-tit">
+      <div className="capa-foto">
+        <Img src="/img/capa.webp" w={1216} h={1720} eager alt="Mãos de criança pintadas de verde carimbando um painel coletivo" />
+      </div>
+      <div className="capa-grid" aria-hidden="true">
+        <span />
+        <span />
+        <span />
+      </div>
+
+      <p className="capa-run">
+        <span>Santa Rita – PB</span>
+        <span>Educação ambiental nas escolas públicas</span>
+      </p>
+
+      <h1 className="capa-tit" id="capa-tit">
+        <span className="capa-l1">Projeto</span>
+        <span className="capa-l2">Asa Verde</span>
+      </h1>
+
+      <div className="capa-lado">
+        <p className="capa-lead">
+          Estudantes do IFPB formados como multiplicadores ambientais, presentes toda semana em 17 escolas e centros de educação infantil de Santa Rita.
         </p>
-        <div className="hero-cta">
-          <a className="btn btn--lima" href={LINKS.relatorio2026} download="Projeto-Asa-Verde-Relatorio-de-Impacto-2026.pdf">
+        <div className="capa-cta">
+          <a className="btn btn--lima" href={LINKS.relatorio2026} download={LINKS.arquivo2026}>
             <IconDownload />
             Baixar o relatório 2026
           </a>
-          <a className="btn btn--contorno" href="#resultados">
+          <a className="btn btn--fio" href="#numeros">
             Ver os resultados
           </a>
         </div>
-        <dl className="hero-fatos">
-          {DESTAQUES.map((d) => (
-            <div key={d.rotulo}>
-              <dt>{d.rotulo}</dt>
-              <dd>{d.valor}</dd>
-            </div>
-          ))}
-        </dl>
       </div>
-      <figure className="hero-foto">
-        <Img
-          src="/img/capa.webp"
-          w={1216}
-          h={1720}
-          eager
-          alt="Mãos de criança pintadas de verde carimbando um painel coletivo"
-        />
-        <figcaption>Transformando escolas. Semeando futuro.</figcaption>
-      </figure>
-    </section>
-  );
-}
 
-function Parceiros() {
-  const grupo = (titulo, itens) => (
-    <div className="parc-grupo">
-      <h2 className="parc-tit">{titulo}</h2>
-      <ul>
-        {itens.map((p) => (
-          <li key={p.nome}>
-            <img src={p.logo} width={p.w} height={p.h} alt={p.nome} loading="lazy" />
-          </li>
+      <p className="capa-lema" aria-hidden="true">
+        Transformando escolas. Semeando futuro.
+      </p>
+
+      <dl className="capa-fatos">
+        {DESTAQUES.map((d) => (
+          <div key={d.rotulo}>
+            <dt>{d.rotulo}</dt>
+            <dd>{fmt(d.valor)}</dd>
+          </div>
         ))}
-      </ul>
-    </div>
+      </dl>
+    </section>
   );
+}
+
+function Realizacao() {
   return (
-    <section className="parceiros" aria-label="Instituições parceiras">
-      <div className="wrap parc-in">
-        {grupo("Realização", PARCEIROS.realizacao)}
-        {grupo("Apoio", PARCEIROS.apoio)}
+    <section className="real" aria-label="Instituições parceiras">
+      <div className="wrap real-in">
+        <div className="real-g">
+          <h2>Realização</h2>
+          <ul>
+            {PARCEIROS.realizacao.map((p) => (
+              <li key={p.nome}>
+                <img src={p.logo} width={p.w} height={p.h} alt={p.nome} loading="lazy" />
+              </li>
+            ))}
+          </ul>
+        </div>
+        <div className="real-g">
+          <h2>Apoio</h2>
+          <ul>
+            {PARCEIROS.apoio.map((p) => (
+              <li key={p.nome}>
+                <img src={p.logo} width={p.w} height={p.h} alt={p.nome} loading="lazy" />
+              </li>
+            ))}
+          </ul>
+        </div>
       </div>
     </section>
   );
 }
 
-/* ───────────────────────── O projeto ───────────────────────── */
+/* ───────────────────────── 01 · O projeto ───────────────────────── */
 
 function Projeto() {
   return (
-    <section className="sec projeto" id="projeto" aria-labelledby="projeto-tit">
+    <section className="ch" id="projeto" aria-labelledby="projeto-tit">
       <div className="wrap">
-        <div className="projeto-grid">
-          <div className="projeto-txt">
-            <h2 className="h2" id="projeto-tit">
-              Escolas que se tornam núcleos vivos de educação ambiental
-            </h2>
-            <p className="lead">
-              O Projeto Asa Verde é uma iniciativa de educação ambiental idealizada pelo Ministério
-              Público da Paraíba, a partir da concepção da Promotora de Justiça Dra. Miriam Pereira
-              Vasconcelos, e executada pelo Instituto Federal da Paraíba – Campus Santa Rita em
-              parceria com a Prefeitura Municipal de Santa Rita.
+        <Abertura n="01" nome="O projeto" titulo={<span id="projeto-tit">Escolas que se tornam núcleos vivos de educação ambiental</span>} />
+
+        <div className="proj">
+          <div className="prosa prosa--2col">
+            <p className="prosa-abre">
+              O Projeto Asa Verde é uma iniciativa de educação ambiental idealizada pelo Ministério Público da Paraíba, a partir da concepção da Promotora de Justiça Dra. Miriam Pereira Vasconcelos, e
+              executada pelo Instituto Federal da Paraíba – Campus Santa Rita em parceria com a Prefeitura Municipal de Santa Rita.
             </p>
             <p>
-              Seu propósito é transformar as escolas públicas do município em núcleos vivos de
-              educação ambiental, nos quais crianças e adolescentes aprendem a compreender o
-              território onde vivem, a cuidar dele e a agir como agentes de mudança em suas
-              comunidades.
+              Seu propósito é transformar as escolas públicas do município em núcleos vivos de educação ambiental, nos quais crianças e adolescentes aprendem a compreender o território onde vivem, a
+              cuidar dele e a agir como agentes de mudança em suas comunidades.
             </p>
             <p>
-              Em 2026, segundo ano de execução, o projeto ampliou de forma expressiva o seu alcance.
-              Às 10 escolas de ensino fundamental somaram-se 7 centros de educação infantil, levando
-              a educação ambiental, pela primeira vez, a crianças de 4 a 6 anos. A equipe de
-              multiplicadores também cresceu: 104 estudantes dos cursos técnicos integrados do IFPB
-              atuaram entre abril e novembro, organizados em equipes de campo, de planejamento e de
-              mídia.
+              Em 2026, segundo ano de execução, o projeto ampliou de forma expressiva o seu alcance. Às 10 escolas de ensino fundamental somaram-se 7 centros de educação infantil, levando a educação
+              ambiental, pela primeira vez, a crianças de 4 a 6 anos. A equipe de multiplicadores também cresceu: 104 estudantes dos cursos técnicos integrados do IFPB atuaram entre abril e novembro,
+              organizados em equipes de campo, de planejamento e de mídia.
             </p>
           </div>
-          <figure className="projeto-foto">
-            <Img
-              src="/img/divisor-resultados.webp"
-              w={2000}
-              h={1125}
-              alt="Estudantes e estagiários reunidos diante do painel do Projeto Asa Verde"
-            />
-          </figure>
+
+          <Foto
+            className="proj-foto"
+            f={{ src: "/img/divisor-resultados.webp", w: 2000, h: 1125, alt: "Estudantes e estagiários reunidos diante do painel do Projeto Asa Verde", legenda: "Turma e equipe de estagiários diante do painel do projeto pintado na escola" }}
+          />
         </div>
 
         <ol className="papeis">
-          {PAPEIS.map((p) => (
+          {PAPEIS.map((p, i) => (
             <li key={p.papel}>
-              <p className="papel">{p.papel}</p>
+              <span className="papeis-i">{String(i + 1).padStart(2, "0")}</span>
+              <span className="papeis-papel">{p.papel}</span>
               <h3>{p.nome}</h3>
               <p>{p.texto}</p>
             </li>
           ))}
         </ol>
+
+        <div className="metodo">
+          <h3 className="sub">Como o Asa Verde funciona</h3>
+          <ol className="etapas">
+            {ETAPAS.map((e, i) => (
+              <li key={e.titulo}>
+                <span className="etapas-n" aria-hidden="true">
+                  {i + 1}
+                </span>
+                <h4>{e.titulo}</h4>
+                <p>{e.texto}</p>
+              </li>
+            ))}
+          </ol>
+        </div>
       </div>
     </section>
   );
 }
 
-/* ───────────────────────── Números ───────────────────────── */
+/* ───────────────────────── 02 · Em números ───────────────────────── */
+
+function Matriz() {
+  const [ref, vis] = useInView("0px 0px -10% 0px");
+  const colunas = 94;
+  const linhas = 34;
+  const cols = useMemo(() => {
+    const seq = [];
+    MATRIZ.forEach((c, i) => {
+      for (let j = 0; j < c.n; j++) seq.push(i);
+    });
+    const out = [];
+    for (let c = 0; c < colunas; c++) out.push(seq.slice(c * linhas, (c + 1) * linhas));
+    return out;
+  }, []);
+  const passo = 9;
+  const r = 3.1;
+  const total = MATRIZ.reduce((s, c) => s + c.n, 0);
+
+  return (
+    <figure ref={ref} className={`mz${vis ? " in" : ""}`}>
+      <figcaption className="mz-cab">
+        <strong>Cada ponto é uma ação registrada em 2026.</strong> {fmt(total)} ações, lidas da esquerda para a direita, de cima para baixo. As ações presenciais estão preenchidas; as publicações digitais,
+        vazadas.
+      </figcaption>
+      <svg className="mz-svg" viewBox={`0 0 ${colunas * passo} ${linhas * passo}`} role="img" aria-label={`Matriz de ${fmt(total)} pontos, um para cada ação registrada, agrupados por modalidade`}>
+        {cols.map((col, ci) => (
+          <g key={ci} style={{ "--d": `${ci * 11}ms` }}>
+            {col.map((cat, ri) => {
+              const c = MATRIZ[cat];
+              return c.vazado ? (
+                <circle key={ri} cx={ci * passo + passo / 2} cy={ri * passo + passo / 2} r={r - 0.5} fill="none" stroke="rgba(255,255,255,0.55)" strokeWidth="0.9" />
+              ) : (
+                <circle key={ri} cx={ci * passo + passo / 2} cy={ri * passo + passo / 2} r={r} fill={c.cor} />
+              );
+            })}
+          </g>
+        ))}
+      </svg>
+      <ul className="mz-leg">
+        {MATRIZ.map((c) => (
+          <li key={c.k}>
+            <span className={`mz-sw${c.vazado ? " mz-sw--vazado" : ""}`} style={c.vazado ? undefined : { background: c.cor }} aria-hidden="true" />
+            <span className="mz-nome">{c.nome}</span>
+            <span className="mz-n">{fmt(c.n)}</span>
+          </li>
+        ))}
+      </ul>
+    </figure>
+  );
+}
+
+function Evolucao() {
+  const [ref, vis] = useInView("0px 0px -10% 0px");
+  return (
+    <div ref={ref} className={`evo${vis ? " in" : ""}`}>
+      <div className="evo-txt">
+        <h3 className="sub sub--claro">Em relação a 2025</h3>
+        <p>
+          Em seu segundo ano, o Asa Verde ampliou a rede atendida, a equipe de multiplicadores e, sobretudo, a intensidade do trabalho pedagógico em sala de aula. As oficinas mais que triplicaram e as
+          gincanas e campanhas quadruplicaram.
+        </p>
+        <ul className="evo-leg" aria-label="Legenda">
+          <li>
+            <i className="sw sw--a" />
+            2025
+          </li>
+          <li>
+            <i className="sw sw--b" />
+            2026
+          </li>
+        </ul>
+        <p className="nota nota--claro">Fontes: Relatório de Impacto 2025 (ações de junho a dezembro de 2025) e sistema de relatórios do Projeto Asa Verde 2026.</p>
+      </div>
+      <ol className="evo-lista">
+        {EVOLUCAO.map((e, i) => {
+          const pct = Math.round(((e.b - e.a) / e.a) * 100);
+          return (
+            <li key={e.indicador} style={{ "--i": i }} aria-label={`${e.indicador}: ${fmt(e.a)} em 2025 e ${fmt(e.b)} em 2026, aumento de ${pct}%`}>
+              <span className="evo-ind">{e.indicador}</span>
+              <span className="evo-bars" aria-hidden="true">
+                <span className="evo-row">
+                  <i className="evo-b evo-b--a" style={{ "--v": `${(e.a / e.b) * 100}%` }} />
+                  <em>{fmt(e.a)}</em>
+                </span>
+                <span className="evo-row">
+                  <i className="evo-b evo-b--b" style={{ "--v": "100%" }} />
+                  <em>{fmt(e.b)}</em>
+                </span>
+              </span>
+              <span className="evo-pct" aria-hidden="true">
+                +{pct}%
+              </span>
+            </li>
+          );
+        })}
+      </ol>
+    </div>
+  );
+}
 
 function Numeros() {
   return (
-    <section className="sec numeros" id="resultados" aria-labelledby="numeros-tit">
+    <section className="ch ch--noite" id="numeros" aria-labelledby="numeros-tit">
       <div className="wrap">
-        <div className="sec-cab sec-cab--claro">
-          <h2 className="h2" id="numeros-tit">
-            O ciclo 2026 em números
-          </h2>
-          <p>Abril a novembro de 2026, com dados consolidados em 7 de novembro.</p>
+        <Abertura claro n="02" nome="Em números" titulo={<span id="numeros-tit">Um ano de educação ambiental em escala</span>} lead="Abril a novembro de 2026. Dados consolidados em 7 de novembro." />
+
+        <div className="heroi">
+          <p className="heroi-n">
+            <Contador valor={41506} />
+          </p>
+          <p className="heroi-t">
+            participações de estudantes e crianças nas atividades<sup>1</sup>
+          </p>
         </div>
 
-        <dl className="num-destaques">
-          {DESTAQUES.map((d) => (
-            <div key={d.rotulo}>
-              <dt>
-                <strong>{d.rotulo}</strong>
-                <span>{d.detalhe}</span>
-              </dt>
-              <dd className="num-grande">{d.valor}</dd>
-            </div>
-          ))}
-        </dl>
+        <Matriz />
 
-        <dl className="num-grade">
+        <dl className="ledger">
           {NUMEROS.map((n) => (
             <div key={n.rotulo}>
               <dt>{n.rotulo}</dt>
@@ -278,146 +474,56 @@ function Numeros() {
           ))}
         </dl>
 
-        <p className="nota nota--claro">
-          Participações correspondem à soma dos participantes registrados em cada atividade; um
-          mesmo estudante pode ter participado de várias ações ao longo do ciclo. Ações registradas
-          incluem as publicações digitais.
+        <p className="nota nota--claro nota--rodape">
+          <sup>1</sup> Participações correspondem à soma dos participantes registrados em cada atividade; um mesmo estudante pode ter participado de várias ações ao longo do ciclo. Ações registradas incluem
+          as publicações digitais.
         </p>
+
+        <Evolucao />
       </div>
     </section>
   );
 }
 
-const fmt = (n) => n.toLocaleString("pt-BR");
-
-function Evolucao() {
-  return (
-    <section className="sec evolucao" aria-labelledby="evo-tit">
-      <div className="wrap evo-grid">
-        <div className="evo-txt">
-          <h2 className="h2" id="evo-tit">
-            O projeto cresceu em todas as frentes
-          </h2>
-          <p>
-            Em seu segundo ano, o Asa Verde ampliou a rede atendida, a equipe de multiplicadores e,
-            sobretudo, a intensidade do trabalho pedagógico em sala de aula. As oficinas mais que
-            triplicaram e as gincanas e campanhas quadruplicaram em relação a 2025.
-          </p>
-          <ul className="legenda" aria-label="Legenda">
-            <li>
-              <span className="sw sw--a" aria-hidden="true" />
-              2025
-            </li>
-            <li>
-              <span className="sw sw--b" aria-hidden="true" />
-              2026
-            </li>
-          </ul>
-          <p className="nota">
-            Fontes: Relatório de Impacto 2025 (ações executadas entre junho e dezembro de 2025) e
-            sistema de relatórios do Projeto Asa Verde 2026. As barras comparam cada indicador com o
-            valor de 2026.
-          </p>
-        </div>
-
-        <ul className="evo-lista">
-          {EVOLUCAO.map((e) => {
-            const pct = Math.round(((e.b - e.a) / e.a) * 100);
-            const largura = (e.a / e.b) * 100;
-            return (
-              <li
-                key={e.indicador}
-                className="evo-item"
-                aria-label={`${e.indicador}: ${fmt(e.a)} em 2025 e ${fmt(e.b)} em 2026, aumento de ${pct}%`}
-              >
-                <div className="evo-cab" aria-hidden="true">
-                  <span>{e.indicador}</span>
-                  <strong>+{pct}%</strong>
-                </div>
-                <div className="evo-barra" aria-hidden="true" title={`2025: ${fmt(e.a)}`}>
-                  <span className="evo-b evo-b--a" style={{ "--v": `${largura}%` }} />
-                  <em>{fmt(e.a)}</em>
-                </div>
-                <div className="evo-barra" aria-hidden="true" title={`2026: ${fmt(e.b)}`}>
-                  <span className="evo-b evo-b--b" style={{ "--v": "100%" }} />
-                  <em>{fmt(e.b)}</em>
-                </div>
-              </li>
-            );
-          })}
-        </ul>
-      </div>
-    </section>
-  );
-}
-
-/* ───────────────────────── Como funciona ───────────────────────── */
-
-function ComoFunciona() {
-  return (
-    <section className="sec funciona" aria-labelledby="funciona-tit">
-      <div className="wrap">
-        <div className="sec-cab">
-          <h2 className="h2" id="funciona-tit">
-            Como o Asa Verde funciona
-          </h2>
-          <p>
-            O projeto combina formação de jovens multiplicadores, presença semanal nas unidades
-            educacionais, registro sistemático de cada ação e acompanhamento institucional pelos
-            entes parceiros.
-          </p>
-        </div>
-        <ol className="etapas">
-          {ETAPAS.map((e, i) => (
-            <li key={e.titulo}>
-              <span className="etapa-n" aria-hidden="true">
-                {i + 1}
-              </span>
-              <h3>{e.titulo}</h3>
-              <p>{e.texto}</p>
-            </li>
-          ))}
-        </ol>
-      </div>
-    </section>
-  );
-}
-
-/* ───────────────────────── Eixos ───────────────────────── */
+/* ───────────────────────── 03 · Eixos ───────────────────────── */
 
 function Eixo({ e, idx }) {
-  const triplo = e.fotos.length === 3;
+  const [ref, vis] = useInView();
+  const trio = e.fotos.length === 3;
   const maxRank = e.ranking ? e.ranking[0][1] : 0;
   return (
-    <article className={`eixo${idx % 2 ? " eixo--inv" : ""}${triplo ? " eixo--triplo" : ""}`} id={e.id} aria-labelledby={`${e.id}-tit`}>
-      {triplo ? (
-        <div className="eixo-trio">
-          {e.fotos.map((f) => (
-            <figure key={f.src}>
-              <Img src={f.src} w={f.w} h={f.h} alt={f.alt} />
-              <figcaption>{f.legenda}</figcaption>
-            </figure>
-          ))}
-        </div>
-      ) : (
-        <div className="eixo-fotos">
-          <Img className="eixo-f1" src={e.fotos[0].src} w={e.fotos[0].w} h={e.fotos[0].h} alt={e.fotos[0].alt} />
-          <Img className="eixo-f2" src={e.fotos[1].src} w={e.fotos[1].w} h={e.fotos[1].h} alt={e.fotos[1].alt} />
-        </div>
-      )}
+    <article ref={ref} className={`eixo${idx % 2 ? " eixo--inv" : ""}${vis ? " in" : ""}`} id={e.id} aria-labelledby={`${e.id}-tit`}>
+      <div className="eixo-media">
+        {trio ? (
+          <div className="trio">
+            {e.fotos.map((f) => (
+              <Foto key={f.src} f={f} />
+            ))}
+          </div>
+        ) : (
+          <div className="dupla">
+            <Foto className="dupla-a" f={e.fotos[0]} />
+            <Foto className="dupla-b" f={e.fotos[1]} />
+          </div>
+        )}
+      </div>
 
       <div className="eixo-txt">
-        <p className="eixo-rot">
-          <span>{e.eixo}</span>
-          {e.nome}
+        <p className="eixo-run">
+          <span>Eixo {e.n}</span>
+          <span>{e.nome}</span>
         </p>
         <h3 className="eixo-tit" id={`${e.id}-tit`}>
           <span className="eixo-valor">{e.valor}</span>
           <span className="eixo-frase">{e.titulo}</span>
         </h3>
-        <p>{e.texto}</p>
+        <div className="prosa">
+          {e.texto.map((t) => (
+            <p key={t.slice(0, 24)}>{t}</p>
+          ))}
+        </div>
 
-        <dl className="eixo-nums">
+        <dl className="minis">
           {e.numeros.map(([v, r]) => (
             <div key={r}>
               <dt>{r}</dt>
@@ -427,56 +533,58 @@ function Eixo({ e, idx }) {
         </dl>
 
         {e.lista && (
-          <>
-            <h4 className="mini-tit">{e.listaTitulo}</h4>
-            <ul className="chips">
+          <div className="bloco">
+            <h4 className="sub">{e.listaTitulo}</h4>
+            <ul className="lista-fio">
               {e.lista.map((t) => (
                 <li key={t}>{t}</li>
               ))}
             </ul>
-          </>
+          </div>
         )}
 
         {e.ranking && (
-          <>
-            <h4 className="mini-tit">Unidades que mais plantaram</h4>
-            <ul className="rank">
+          <div className="bloco">
+            <h4 className="sub">Unidades que mais plantaram</h4>
+            <ol className="rank">
               {e.ranking.map(([nome, v]) => (
                 <li key={nome}>
                   <span className="rank-nome">{nome}</span>
                   <span className="rank-barra" aria-hidden="true">
-                    <span style={{ "--v": `${(v / maxRank) * 100}%` }} />
+                    <i style={{ "--v": `${(v / maxRank) * 100}%` }} />
                   </span>
-                  <span className="rank-v">{v} mudas</span>
+                  <span className="rank-v">
+                    {v} <small>mudas</small>
+                  </span>
                 </li>
               ))}
-            </ul>
-          </>
+            </ol>
+          </div>
         )}
 
         {e.acoes && (
-          <>
-            <h4 className="mini-tit">{e.listaTitulo}</h4>
+          <div className="bloco">
+            <h4 className="sub">{e.listaTitulo}</h4>
             <ul className="acoes">
               {e.acoes.map(([acao, onde]) => (
                 <li key={acao}>
-                  <strong>{acao}</strong>
+                  <span>{acao}</span>
                   <span>{onde}</span>
                 </li>
               ))}
             </ul>
-          </>
+          </div>
         )}
 
         {e.destaque && (
-          <aside className="destaque">
+          <aside className="caixa">
             <h4>{e.destaque.titulo}</h4>
             <p>{e.destaque.texto}</p>
           </aside>
         )}
 
         {e.id === "comunicacao" && (
-          <a className="link-forte" href={LINKS.instagram} {...ext}>
+          <a className="link" href={LINKS.instagram} {...ext}>
             <IconInstagram />
             Seguir @projetoasaverde no Instagram
           </a>
@@ -488,109 +596,175 @@ function Eixo({ e, idx }) {
 
 function Eixos() {
   return (
-    <section className="sec eixos" aria-labelledby="eixos-tit">
+    <section className="ch ch--eixos" id="eixos" aria-labelledby="eixos-tit">
       <div className="wrap">
-        <div className="sec-cab">
-          <h2 className="h2" id="eixos-tit">
-            Quatro eixos de atuação
-          </h2>
-          <p>
-            Da sala de aula ao bairro, as ações do ciclo 2026 se organizaram em educação ambiental,
-            arborização, mobilização e comunicação.
-          </p>
-        </div>
+        <Abertura
+          n="03"
+          nome="Eixos de atuação"
+          titulo={<span id="eixos-tit">Da sala de aula ao bairro, em quatro frentes</span>}
+          lead="As ações do ciclo 2026 se organizaram em educação ambiental, arborização, mobilização e comunicação."
+        />
         {EIXOS.map((e, i) => (
           <Eixo key={e.id} e={e} idx={i} />
         ))}
       </div>
-    </section>
-  );
-}
 
-/* ───────────────────────── Educação infantil ───────────────────────── */
-
-function Infantil() {
-  return (
-    <section className="sec infantil" aria-labelledby="infantil-tit">
-      <div className="wrap infantil-grid">
-        <figure className="infantil-foto">
-          <Img src="/img/inf-abraco.webp" w={1050} h={1400} alt="Duas crianças se abraçando durante atividade em centro de educação infantil" />
-        </figure>
-        <div className="infantil-txt">
-          <p className="rotulo">Novidade de 2026</p>
-          <h2 className="h2" id="infantil-tit">
-            A educação ambiental chega à primeira infância
-          </h2>
-          <p className="lead">
-            Em julho, o Asa Verde passou a atender sete unidades de educação infantil, com crianças
-            de 4 a 6 anos.
-          </p>
-          <p>
-            A mudança exigiu uma nova abordagem: as equipes receberam formação específica com
-            profissionais da educação infantil do município e passaram a trabalhar com histórias,
-            música, brincadeiras, pintura, experimentos simples e plantio. A resposta das crianças
-            foi entusiasmada. Elas levaram para casa mudas, histórias e hábitos, envolvendo as
-            famílias: uma aluna passou a jogar o lixo na lixeira de casa, outra prometeu
-            conscientizar um familiar fumante, e uma criança pediu ajuda aos estagiários ao ver uma
-            queimada perto da escola.
-          </p>
-          <dl className="infantil-nums">
-            {INFANTIL.map(([v, r]) => (
-              <div key={r}>
-                <dt>{r}</dt>
-                <dd>{v}</dd>
-              </div>
-            ))}
-          </dl>
+      <div className="infantil">
+        <div className="wrap infantil-in">
+          <Foto className="infantil-foto" f={{ src: "/img/inf-abraco.webp", w: 1050, h: 1400, alt: "Duas crianças se abraçando durante atividade em centro de educação infantil", legenda: "Centro de educação infantil, segundo semestre de 2026" }} />
+          <div className="infantil-txt">
+            <p className="eixo-run eixo-run--claro">
+              <span>Novidade de 2026</span>
+              <span>Educação infantil</span>
+            </p>
+            <h3 className="infantil-tit">A educação ambiental chega à primeira infância</h3>
+            <div className="prosa prosa--claro">
+              <p>Em julho, o Asa Verde passou a atender sete unidades de educação infantil, com crianças de 4 a 6 anos.</p>
+              <p>
+                A mudança exigiu uma nova abordagem: as equipes receberam formação específica com profissionais da educação infantil do município e passaram a trabalhar com histórias, música,
+                brincadeiras, pintura, experimentos simples e plantio. A resposta das crianças foi entusiasmada. Elas levaram para casa mudas, histórias e hábitos, envolvendo as famílias: uma aluna
+                passou a jogar o lixo na lixeira de casa, outra prometeu conscientizar um familiar fumante, e uma criança pediu ajuda aos estagiários ao ver uma queimada perto da escola.
+              </p>
+            </div>
+            <dl className="minis minis--claro minis--5">
+              {INFANTIL.map(([v, r]) => (
+                <div key={r}>
+                  <dt>{r}</dt>
+                  <dd>{v}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
         </div>
       </div>
     </section>
   );
 }
 
-/* ───────────────────────── Território ───────────────────────── */
+/* ───────────────────────── 04 · Território ───────────────────────── */
 
 function Territorio() {
-  const lista = (titulo, itens) => (
-    <div className="unid-grupo">
-      <h3 className="mini-tit">{titulo}</h3>
+  const [ativo, setAtivo] = useState(null);
+  const [ordem, setOrdem] = useState({ k: 8, dir: -1 });
+  const [aberta, setAberta] = useState(false);
+
+  const linhas = useMemo(() => {
+    const l = [...RESULTADOS_UNIDADES];
+    if (ordem.k === 1) l.sort((a, b) => a[1].localeCompare(b[1], "pt-BR") * ordem.dir);
+    else l.sort((a, b) => (a[ordem.k] - b[ordem.k]) * ordem.dir);
+    return l;
+  }, [ordem]);
+
+  const ordenar = (k) => setOrdem((o) => (o.k === k ? { k, dir: -o.dir } : { k, dir: k === 1 ? 1 : -1 }));
+
+  const grupo = (titulo, tipo) => (
+    <div className="unid-g">
+      <h3 className="sub">{titulo}</h3>
       <ol className="unid">
-        {itens.map(([n, nome, bairro]) => (
-          <li key={n}>
-            <span className="unid-n">{n}</span>
-            <span className="unid-nome">{nome}</span>
-            <span className="unid-bairro">{bairro}</span>
+        {UNIDADES.filter((u) => u.tipo === tipo).map((u) => (
+          <li key={u.n} className={ativo === u.n ? "ativo" : undefined} onMouseEnter={() => setAtivo(u.n)} onMouseLeave={() => setAtivo(null)} onFocus={() => setAtivo(u.n)} onBlur={() => setAtivo(null)} tabIndex={0}>
+            <span className={`pin pin--${u.tipo}`}>{u.n}</span>
+            <span className="unid-nome">{u.nome}</span>
+            <span className="unid-bairro">{u.bairro}</span>
           </li>
         ))}
       </ol>
     </div>
   );
+
   return (
-    <section className="sec territorio" id="territorio" aria-labelledby="terr-tit">
+    <section className="ch" id="territorio" aria-labelledby="terr-tit">
       <div className="wrap">
-        <div className="sec-cab">
-          <h2 className="h2" id="terr-tit">
-            17 unidades em 8 bairros e localidades
-          </h2>
-          <p>
-            O projeto está presente na zona urbana de Santa Rita e em Lerolândia, cerca de 18 km ao
-            norte do centro.
-          </p>
-        </div>
-        <div className="terr-grid">
+        <Abertura n="04" nome="Território" titulo={<span id="terr-tit">17 unidades em 8 bairros e localidades</span>} lead="Presença na zona urbana de Santa Rita e em Lerolândia, cerca de 18 km ao norte do centro." />
+
+        <div className="terr">
           <figure className="mapa">
-            <Img src="/img/mapa.webp" w={1364} h={1040} alt="Mapa de Santa Rita com a localização aproximada das 17 unidades atendidas, numeradas de 1 a 17" />
-            <figcaption>
-              Localização aproximada das unidades. Base cartográfica © OpenStreetMap contributors.
-            </figcaption>
+            <div className="mapa-img">
+              <Img src="/img/mapa.webp" w={1364} h={1040} alt="Mapa de Santa Rita com a localização aproximada das 17 unidades atendidas, numeradas de 1 a 17" />
+              {UNIDADES.map((u) => (
+                <button
+                  key={u.n}
+                  type="button"
+                  className={`mapa-pin${ativo === u.n ? " ativo" : ""}`}
+                  style={{ "--x": `${u.x}%`, "--y": `${u.y}%` }}
+                  onMouseEnter={() => setAtivo(u.n)}
+                  onMouseLeave={() => setAtivo(null)}
+                  onFocus={() => setAtivo(u.n)}
+                  onBlur={() => setAtivo(null)}
+                  aria-label={`${u.n}: ${u.nome}, ${u.bairro}`}
+                >
+                  <span className="mapa-tip">
+                    <strong>{u.nome}</strong>
+                    <span>{u.bairro}</span>
+                  </span>
+                </button>
+              ))}
+            </div>
+            <figcaption>Localização aproximada das unidades. Base cartográfica © OpenStreetMap contributors. Passe o cursor sobre um número para ver a unidade.</figcaption>
           </figure>
+
           <div className="unid-col">
-            {lista("Escolas de ensino fundamental", ESCOLAS)}
-            {lista("Centros de educação infantil", CIEIS)}
+            {grupo("Escolas de ensino fundamental", "escola")}
+            {grupo("Centros de educação infantil", "ciei")}
             <p className="nota">
-              A EMEIF e EJA Padre João Félix Medeiros integrou a fase inicial do projeto (maio e
-              junho). A partir de agosto, a equipe passou a atuar na EMEIF e EJA Dr. Flávio Maroja
-              Filho.
+              A EMEIF e EJA Padre João Félix Medeiros integrou a fase inicial do projeto (maio e junho). A partir de agosto, a equipe passou a atuar na EMEIF e EJA Dr. Flávio Maroja Filho.
+            </p>
+          </div>
+        </div>
+
+        <div className="tab-wrap">
+          <button type="button" className="tab-toggle" aria-expanded={aberta} aria-controls="tabela-unidades" onClick={() => setAberta((v) => !v)}>
+            <span>{aberta ? "Ocultar" : "Ver"} os resultados por unidade</span>
+            <span className="tab-toggle-n">{RESULTADOS_UNIDADES.length} linhas</span>
+          </button>
+          <div id="tabela-unidades" className={`tab-scroll${aberta ? "" : " oculta"}`} hidden={!aberta}>
+            <table className="tabela">
+              <caption>Resultados do ciclo 2026 por unidade. Clique no título de uma coluna para ordenar.</caption>
+              <thead>
+                <tr>
+                  <th scope="col">
+                    <button type="button" onClick={() => ordenar(1)} aria-sort={ordem.k === 1 ? (ordem.dir > 0 ? "ascending" : "descending") : "none"}>
+                      Unidade
+                    </button>
+                  </th>
+                  {COLUNAS_RESULTADOS.map((c) => (
+                    <th scope="col" key={c.k} className="num-col">
+                      <button type="button" onClick={() => ordenar(c.k)} aria-sort={ordem.k === c.k ? (ordem.dir > 0 ? "ascending" : "descending") : "none"} className={ordem.k === c.k ? "ativo" : undefined}>
+                        {c.nome}
+                      </button>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {linhas.map((l) => (
+                  <tr key={l[1]} className={l[0] === "—" ? "tab-nota" : undefined}>
+                    <th scope="row">
+                      <span className="tab-n">{l[0]}</span>
+                      {l[1]}
+                    </th>
+                    {COLUNAS_RESULTADOS.map((c) => (
+                      <td key={c.k} className={`num-col${ordem.k === c.k ? " ativo" : ""}`}>
+                        {fmt(l[c.k])}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr>
+                  <th scope="row">Total do projeto</th>
+                  {COLUNAS_RESULTADOS.map((c) => (
+                    <td key={c.k} className="num-col">
+                      {fmt(RESULTADOS_UNIDADES.reduce((s, l) => s + l[c.k], 0))}
+                    </td>
+                  ))}
+                </tr>
+              </tfoot>
+            </table>
+            <p className="nota">
+              Dados do sistema de relatórios do Projeto Asa Verde, consolidados em 07/11/2026 e complementados pela coordenação com base nos registros fotográficos das equipes. Unidades 11 a 17 foram
+              atendidas a partir de julho.
             </p>
           </div>
         </div>
@@ -599,65 +773,59 @@ function Territorio() {
   );
 }
 
-/* ───────────────────────── Linha do tempo ───────────────────────── */
+/* ───────────────────────── 05 · Linha do tempo ───────────────────────── */
 
-function LinhaDoTempo() {
+function Tempo() {
   return (
-    <section className="sec tempo" aria-labelledby="tempo-tit">
-      <div className="wrap tempo-grid">
-        <div className="sec-cab sec-cab--claro tempo-cab">
-          <h2 className="h2" id="tempo-tit">
-            Os marcos do ciclo 2026
-          </h2>
-          <p>De abril a novembro, da abertura oficial às despedidas nas unidades.</p>
-        </div>
-        <ol className="tempo-lista">
-          {LINHA_DO_TEMPO.map(([data, tit, txt]) => (
-            <li key={tit}>
-              <span className="tempo-data">{data}</span>
-              <div>
-                <h3>{tit}</h3>
-                <p>{txt}</p>
-              </div>
+    <section className="ch" id="tempo" aria-labelledby="tempo-tit">
+      <div className="wrap">
+        <Abertura n="05" nome="Linha do tempo" titulo={<span id="tempo-tit">Os marcos do ciclo 2026</span>} lead="De abril a novembro: da abertura oficial às despedidas nas unidades." />
+        <ol className="meses">
+          {MESES.map((m) => (
+            <li key={m.mes} className="mes">
+              <span className="mes-rot" aria-hidden="true">
+                {m.mes}
+              </span>
+              <span className="visually-hidden">{m.nome}</span>
+              <ul>
+                {m.eventos.map(([dia, tit, txt]) => (
+                  <li key={tit}>
+                    <span className="ev-dia">{dia}</span>
+                    <div>
+                      <h3>{tit}</h3>
+                      <p>{txt}</p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
             </li>
           ))}
         </ol>
-      </div>
-    </section>
-  );
-}
 
-/* ───────────────────────── Acompanhamento ───────────────────────── */
-
-function Acompanhamento() {
-  return (
-    <section className="sec acomp" aria-labelledby="acomp-tit">
-      <div className="wrap acomp-grid">
-        <div className="acomp-fotos">
-          <Img src="/img/acp-carlosarnobio.webp" w={1400} h={1050} alt="Visita da Promotora de Justiça à EMEF Prof. Carlos Arnóbio Maroja Di Pace com estagiários e equipe escolar" />
-          <Img src="/img/acp-odilon.webp" w={1400} h={1050} alt="Visita da Promotora de Justiça à EMEF Odilon Ribeiro Coutinho com a equipe de estagiários" />
-        </div>
-        <div className="acomp-txt">
-          <h2 className="h2" id="acomp-tit">
-            Um projeto acompanhado de perto
-          </h2>
-          <p>
-            Entre julho e novembro, a Promotora de Justiça Dra. Miriam Pereira Vasconcelos,
-            idealizadora do projeto, visitou as unidades atendidas para acompanhar as atividades,
-            dialogar com gestões, professores, estagiários e estudantes e conhecer de perto os
-            trabalhos produzidos pelas turmas. Nas visitas, esteve acompanhada de integrantes da
-            coordenação do projeto no IFPB e na SEMMA.
-          </p>
-          <div className="transp">
-            <h3>Transparência</h3>
-            <p>
-              Cada ação é registrada no sistema de relatórios do projeto e consolidada no Painel de
-              Monitoramento, em Power BI, de acesso público.
-            </p>
-            <a className="btn btn--floresta" href={LINKS.powerbi2026} {...ext}>
-              <IconChart />
-              Abrir o painel de monitoramento
-            </a>
+        <div className="acomp">
+          <div className="acomp-fotos">
+            <Foto f={{ src: "/img/acp-carlosarnobio.webp", w: 1400, h: 1050, alt: "Visita da Promotora de Justiça à EMEF Prof. Carlos Arnóbio Maroja Di Pace", legenda: "EMEF Prof. Carlos Arnóbio Maroja Di Pace" }} />
+            <Foto f={{ src: "/img/acp-odilon.webp", w: 1400, h: 1050, alt: "Visita da Promotora de Justiça à EMEF Odilon Ribeiro Coutinho", legenda: "EMEF Odilon Ribeiro Coutinho" }} />
+          </div>
+          <div className="acomp-txt">
+            <h3 className="sub">Acompanhamento institucional</h3>
+            <h4 className="acomp-tit">Um projeto acompanhado de perto</h4>
+            <div className="prosa">
+              <p>
+                Entre julho e novembro, a Promotora de Justiça Dra. Miriam Pereira Vasconcelos, idealizadora do projeto, visitou as unidades atendidas para acompanhar as atividades, dialogar com
+                gestões, professores, estagiários e estudantes e conhecer de perto os trabalhos produzidos pelas turmas. Nas visitas, esteve acompanhada de integrantes da coordenação do projeto no
+                IFPB e na SEMMA.
+              </p>
+            </div>
+            <div className="transp">
+              <p>
+                <strong>Transparência.</strong> Cada ação é registrada no sistema de relatórios do projeto e consolidada no Painel de Monitoramento, em Power BI, de acesso público.
+              </p>
+              <a className="btn btn--tinta" href={LINKS.powerbi2026} {...ext}>
+                <IconChart />
+                Abrir o painel de monitoramento
+              </a>
+            </div>
           </div>
         </div>
       </div>
@@ -665,50 +833,66 @@ function Acompanhamento() {
   );
 }
 
-/* ───────────────────────── Vozes ───────────────────────── */
+/* ───────────────────────── 06 · Vozes ───────────────────────── */
 
 function Vozes() {
-  const [primeira, ...demais] = VOZES;
+  const [i, setI] = useState(0);
+  const [pausa, setPausa] = useState(false);
+  const reduz = usePrefersReducedMotion();
+  const [ref, vis] = useInView("0px 0px -20% 0px");
+
+  useEffect(() => {
+    if (reduz || pausa || !vis) return;
+    const t = setInterval(() => setI((v) => (v + 1) % VOZES.length), 9000);
+    return () => clearInterval(t);
+  }, [reduz, pausa, vis]);
+
+  const v = VOZES[i];
   return (
-    <section className="sec vozes" aria-labelledby="vozes-tit">
+    <section className="ch ch--noite" id="vozes" aria-labelledby="vozes-tit">
       <div className="wrap">
-        <div className="sec-cab">
-          <h2 className="h2" id="vozes-tit">
-            O que ficou nas escolas
-          </h2>
-          <p>Relatos registrados pelas equipes de estagiários nos relatórios mensais.</p>
-        </div>
-        <figure className="voz voz--grande">
-          <blockquote>
-            <p>{primeira.texto}</p>
-          </blockquote>
-          <figcaption>
-            <strong>{primeira.autor}</strong>
-            <span>{primeira.unidade}</span>
-          </figcaption>
-        </figure>
-        <div className="vozes-grade">
-          {demais.map((v) => (
-            <figure className="voz" key={v.unidade}>
-              <blockquote>
-                <p>{v.texto}</p>
-              </blockquote>
-              <figcaption>
-                <strong>{v.autor}</strong>
-                <span>{v.unidade}</span>
-              </figcaption>
-            </figure>
-          ))}
+        <Abertura claro n="06" nome="Vozes" titulo={<span id="vozes-tit">O que ficou nas escolas</span>} lead="Relatos registrados pelas equipes de estagiários nos relatórios mensais." />
+
+        <div ref={ref} className="deck" onMouseEnter={() => setPausa(true)} onMouseLeave={() => setPausa(false)} onFocus={() => setPausa(true)} onBlur={() => setPausa(false)}>
+          <figure className="deck-fig" aria-live="polite">
+            <blockquote key={i} className="deck-q">
+              <p>{v.texto}</p>
+            </blockquote>
+            <figcaption key={`c${i}`} className="deck-c">
+              <span>{v.autor}</span>
+              <span>{v.unidade}</span>
+            </figcaption>
+          </figure>
+          <div className="deck-nav">
+            <button type="button" className="deck-btn" onClick={() => setI((i - 1 + VOZES.length) % VOZES.length)} aria-label="Relato anterior">
+              <IconPrev />
+            </button>
+            <ol className="deck-dots" aria-label="Escolher relato">
+              {VOZES.map((x, k) => (
+                <li key={x.unidade}>
+                  <button type="button" aria-label={`Relato ${k + 1}: ${x.unidade}`} aria-current={k === i ? "true" : undefined} onClick={() => setI(k)} />
+                </li>
+              ))}
+            </ol>
+            <button type="button" className="deck-btn" onClick={() => setI((i + 1) % VOZES.length)} aria-label="Próximo relato">
+              <IconNext />
+            </button>
+            <span className="deck-cont" aria-hidden="true">
+              {String(i + 1).padStart(2, "0")} / {String(VOZES.length).padStart(2, "0")}
+            </span>
+          </div>
         </div>
       </div>
     </section>
   );
 }
 
-/* ───────────────────────── Galeria ───────────────────────── */
+/* ───────────────────────── 07 · Galeria ───────────────────────── */
 
 function Galeria() {
   const [atual, setAtual] = useState(-1);
+  const [prog, setProg] = useState(0);
+  const faixa = useRef(null);
   const dlg = useRef(null);
 
   useEffect(() => {
@@ -718,50 +902,63 @@ function Galeria() {
     if (atual < 0 && d.open) d.close();
   }, [atual]);
 
-  const mover = (passo) => setAtual((i) => (i + passo + GALERIA.length) % GALERIA.length);
+  const onScroll = useCallback(() => {
+    const el = faixa.current;
+    if (!el) return;
+    const max = el.scrollWidth - el.clientWidth;
+    setProg(max > 0 ? el.scrollLeft / max : 0);
+  }, []);
 
-  const onKey = (e) => {
-    if (e.key === "ArrowRight") mover(1);
-    if (e.key === "ArrowLeft") mover(-1);
+  const rolar = (dir) => {
+    const el = faixa.current;
+    if (!el) return;
+    el.scrollBy({ left: dir * el.clientWidth * 0.8, behavior: "smooth" });
   };
 
+  const mover = (passo) => setAtual((i) => (i + passo + GALERIA.length) % GALERIA.length);
   const foto = atual >= 0 ? GALERIA[atual] : null;
 
   return (
-    <section className="sec galeria" aria-labelledby="gal-tit">
+    <section className="ch ch--galeria" id="galeria" aria-labelledby="gal-tit">
       <div className="wrap">
-        <div className="sec-cab">
-          <h2 className="h2" id="gal-tit">
-            Da sala de aula ao território
-          </h2>
-          <p>Momentos do ciclo 2026 registrados pelas equipes de estagiários e pela equipe de Mídia.</p>
-        </div>
-        <ul className="gal-grade">
+        <Abertura n="07" nome="Galeria" titulo={<span id="gal-tit">Momentos do ciclo 2026</span>} lead="Registros das equipes de estagiários e da equipe de Mídia. Deslize para o lado ou toque em uma foto para ampliá-la." />
+      </div>
+
+      <div className="faixa-wrap">
+        <ul className="faixa" ref={faixa} onScroll={onScroll} tabIndex={0} aria-label="Fotos do ciclo 2026">
           {GALERIA.map((f, i) => (
-            <li key={f.src} className={f.destaque ? "gal-destaque" : undefined} style={{ "--c": f.c, "--r": f.r }}>
+            <li key={f.src} style={{ "--ar": `${f.w} / ${f.h}` }}>
               <button type="button" onClick={() => setAtual(i)} aria-label={`Ampliar foto: ${f.alt}`}>
                 <Img src={f.src} w={f.w} h={f.h} alt="" />
               </button>
+              <span className="faixa-leg">
+                <span className="faixa-i">{String(i + 1).padStart(2, "0")}</span>
+                {f.legenda}
+              </span>
             </li>
           ))}
         </ul>
+        <div className="wrap faixa-ctl">
+          <span className="faixa-prog" aria-hidden="true">
+            <i style={{ "--p": prog }} />
+          </span>
+          <button type="button" className="deck-btn deck-btn--tinta" onClick={() => rolar(-1)} aria-label="Fotos anteriores">
+            <IconPrev />
+          </button>
+          <button type="button" className="deck-btn deck-btn--tinta" onClick={() => rolar(1)} aria-label="Próximas fotos">
+            <IconNext />
+          </button>
+        </div>
       </div>
 
-      <dialog
-        ref={dlg}
-        className="lightbox"
-        aria-label="Foto ampliada"
-        onClose={() => setAtual(-1)}
-        onKeyDown={onKey}
-        onClick={(e) => e.target === dlg.current && setAtual(-1)}
-      >
+      <dialog ref={dlg} className="lightbox" aria-label="Foto ampliada" onClose={() => setAtual(-1)} onKeyDown={(e) => (e.key === "ArrowRight" ? mover(1) : e.key === "ArrowLeft" ? mover(-1) : null)} onClick={(e) => e.target === dlg.current && setAtual(-1)}>
         {foto && (
           <figure>
             <img src={foto.src} width={foto.w} height={foto.h} alt={foto.alt} />
             <figcaption>
-              <span>{foto.alt}</span>
+              <span>{foto.legenda}</span>
               <span className="lb-cont">
-                {atual + 1} de {GALERIA.length}
+                {atual + 1} / {GALERIA.length}
               </span>
             </figcaption>
           </figure>
@@ -780,86 +977,104 @@ function Galeria() {
   );
 }
 
-/* ───────────────────────── Imprensa ───────────────────────── */
+/* ───────────────────────── 08 · Imprensa ───────────────────────── */
+
+function Selo() {
+  return (
+    <div className="selo" role="img" aria-label="Prêmio Sebrae Cidade Empreendedora, prata, categoria Sustentabilidade e Meio Ambiente">
+      <svg viewBox="0 0 200 200" aria-hidden="true">
+        <defs>
+          <path id="selo-circ" d="M100,100 m-74,0 a74,74 0 1,1 148,0 a74,74 0 1,1 -148,0" />
+        </defs>
+        <circle cx="100" cy="100" r="98" className="selo-anel" />
+        <circle cx="100" cy="100" r="52" className="selo-anel" />
+        <text className="selo-txt">
+          <textPath href="#selo-circ" startOffset="0" textLength="464" lengthAdjust="spacing">
+            Prêmio Sebrae · Cidade Empreendedora · Prata · Sustentabilidade e Meio Ambiente ·
+          </textPath>
+        </text>
+        <text x="100" y="94" textAnchor="middle" className="selo-c1">
+          Santa Rita
+        </text>
+        <text x="100" y="118" textAnchor="middle" className="selo-c2">
+          2026
+        </text>
+      </svg>
+    </div>
+  );
+}
 
 function Imprensa() {
   return (
-    <section className="sec imprensa" id="imprensa" aria-labelledby="imp-tit">
+    <section className="ch" id="imprensa" aria-labelledby="imp-tit">
       <div className="wrap">
-        <div className="imp-topo">
-          <div className="sec-cab">
-            <h2 className="h2" id="imp-tit">
-              O Asa Verde na imprensa
-            </h2>
-            <p>Notícias publicadas sobre o projeto por parceiros e veículos de comunicação.</p>
-          </div>
-          <aside className="premio" aria-labelledby="premio-tit">
-            <div className="premio-selo" aria-hidden="true">
-              Prata
-            </div>
-            <div>
-              <h3 id="premio-tit">Reconhecimento nacional</h3>
-              <p>
-                Por meio do Projeto Asa Verde, Santa Rita recebeu o prêmio prata na categoria
-                Sustentabilidade e Meio Ambiente do programa Cidade Empreendedora, do Sebrae.
-              </p>
-            </div>
+        <Abertura n="08" nome="Imprensa" titulo={<span id="imp-tit">O Asa Verde na imprensa</span>} lead="Notícias publicadas sobre o projeto por parceiros e veículos de comunicação." />
+
+        <div className="imp">
+          <ol className="noticias">
+            {IMPRENSA.map((n) => (
+              <li key={n.url}>
+                <a href={n.url} {...ext}>
+                  <span className="not-meta">
+                    <span className="not-veic">{n.veiculo}</span>
+                    <time>{n.data}</time>
+                  </span>
+                  <span className="not-corpo">
+                    <span className="not-tit">{n.titulo}</span>
+                    <span className="not-res">{n.resumo}</span>
+                  </span>
+                  <span className="not-ir" aria-hidden="true">
+                    <IconExternal />
+                  </span>
+                </a>
+              </li>
+            ))}
+          </ol>
+
+          <aside className="premio">
+            <Selo />
+            <h3>Reconhecimento nacional</h3>
+            <p>
+              Por meio do Projeto Asa Verde, Santa Rita recebeu o prêmio prata na categoria Sustentabilidade e Meio Ambiente do programa Cidade Empreendedora, do Sebrae, edição 2025/2026.
+            </p>
           </aside>
         </div>
-
-        <ul className="noticias">
-          {IMPRENSA.map((n) => (
-            <li key={n.url}>
-              <a href={n.url} {...ext}>
-                <span className="not-meta">
-                  <strong>{n.veiculo}</strong>
-                  <time>{n.data}</time>
-                </span>
-                <span className="not-corpo">
-                  <span className="not-tit">{n.titulo}</span>
-                  <span className="not-res">{n.resumo}</span>
-                </span>
-                <span className="not-ir" aria-hidden="true">
-                  <IconExternal />
-                </span>
-              </a>
-            </li>
-          ))}
-        </ul>
       </div>
     </section>
   );
 }
 
-/* ───────────────────────── Relatórios ───────────────────────── */
+/* ───────────────────────── 09 · Relatórios ───────────────────────── */
 
-function Relatorios() {
+function Relatorios({ onFormacao }) {
+  const acessos = [
+    { icon: <IconChart />, titulo: "Painel de monitoramento", texto: "Indicadores do ciclo 2026 em Power BI, atualizados a partir do sistema de relatórios.", href: LINKS.powerbi2026, ext: true },
+    { icon: <IconInstagram />, titulo: "Instagram @projetoasaverde", texto: "Fotos, vídeos e a rotina das ações nas escolas e nos centros de educação infantil.", href: LINKS.instagram, ext: true },
+    { icon: <IconClipboard />, titulo: "Sistema de relatórios", texto: "Registro das ações pelas equipes, com data, turma, participantes e evidências. Acesso restrito às equipes.", href: LINKS.sistema, ext: true },
+    { icon: <IconCap />, titulo: "Formação dos multiplicadores", texto: "Curso online com quatro módulos, avaliações e certificado. Acesso com o código fornecido pela coordenação.", href: "/formacao", ext: false },
+  ];
+
   return (
-    <section className="sec relatorios" id="relatorios" aria-labelledby="rel-tit">
+    <section className="ch ch--rel" id="relatorios" aria-labelledby="rel-tit">
       <div className="wrap">
-        <div className="sec-cab">
-          <h2 className="h2" id="rel-tit">
-            Relatórios de impacto
-          </h2>
-          <p>
-            Os relatórios prestam contas aos entes parceiros e à sociedade sobre as ações executadas
-            em cada ciclo. Baixe a versão completa ou consulte os dados no painel público.
-          </p>
-        </div>
-        <div className="rel-grade">
+        <Abertura n="09" nome="Relatórios" titulo={<span id="rel-tit">Relatórios de impacto</span>} lead="Os relatórios prestam contas aos entes parceiros e à sociedade sobre as ações executadas em cada ciclo. Baixe a versão completa ou consulte os dados no painel público." />
+
+        <div className="livros">
           {RELATORIOS.map((r, i) => (
-            <article className={`rel${i === 0 ? " rel--principal" : ""}`} key={r.ano} aria-labelledby={`rel-${r.ano}`}>
-              <a className="rel-capa" href={r.pdf} download={r.arquivo} tabIndex={-1} aria-hidden="true">
-                <Img src={r.capa} w={720} h={1018} alt="" />
+            <article className={`livro${i === 0 ? " livro--atual" : ""}`} key={r.ano} aria-labelledby={`rel-${r.ano}`}>
+              <a className="livro-obj" href={r.pdf} download={r.arquivo} aria-label={`Baixar o ${r.titulo} (PDF, ${r.tamanho})`}>
+                <span className="livro-capa">
+                  <Img src={r.capa} w={720} h={1018} alt="" />
+                </span>
               </a>
-              <div className="rel-info">
-                <p className="rel-ano">{r.ano}</p>
+              <div className="livro-info">
+                <p className="livro-ano">{r.ano}</p>
                 <h3 id={`rel-${r.ano}`}>{r.titulo}</h3>
-                <p className="rel-periodo">
-                  {r.periodo}. {r.paginas}.
+                <p className="livro-meta">
+                  {r.periodo} · {r.paginas}
                 </p>
-                <p>{r.descricao}</p>
-                <dl className="rel-nums">
+                <p className="livro-desc">{r.descricao}</p>
+                <dl className="minis minis--rel">
                   {r.numeros.map(([v, t]) => (
                     <div key={t}>
                       <dt>{t}</dt>
@@ -867,13 +1082,13 @@ function Relatorios() {
                     </div>
                   ))}
                 </dl>
-                <div className="rel-acoes">
-                  <a className="btn btn--floresta" href={r.pdf} download={r.arquivo}>
+                <div className="livro-acoes">
+                  <a className="btn btn--tinta" href={r.pdf} download={r.arquivo}>
                     <IconDownload />
-                    Baixar o relatório
+                    Baixar o PDF
                     <span className="btn-meta">{r.tamanho}</span>
                   </a>
-                  <a className="btn btn--linha" href={r.painel} {...ext}>
+                  <a className="btn btn--fio-tinta" href={r.painel} {...ext}>
                     <IconChart />
                     Painel de dados {r.ano}
                   </a>
@@ -882,71 +1097,20 @@ function Relatorios() {
             </article>
           ))}
         </div>
-      </div>
-    </section>
-  );
-}
 
-/* ───────────────────────── Acessos ───────────────────────── */
-
-function Acessos({ onFormacao }) {
-  const itens = [
-    {
-      icon: <IconChart />,
-      titulo: "Painel de monitoramento",
-      texto: "Os indicadores do ciclo 2026 em Power BI, atualizados a partir do sistema de relatórios.",
-      href: LINKS.powerbi2026,
-      rotulo: "Power BI",
-      externo: true,
-    },
-    {
-      icon: <IconInstagram />,
-      titulo: "Instagram",
-      texto: "Fotos, vídeos e a rotina das ações nas escolas e nos centros de educação infantil.",
-      href: LINKS.instagram,
-      rotulo: "@projetoasaverde",
-      externo: true,
-    },
-    {
-      icon: <IconClipboard />,
-      titulo: "Sistema de relatórios",
-      texto: "Registro das ações pelas equipes, com data, turma, participantes e evidências. Acesso restrito às equipes do projeto.",
-      href: LINKS.sistema,
-      rotulo: "relatorio-asa-verde-2026.vercel.app",
-      externo: true,
-    },
-    {
-      icon: <IconCap />,
-      titulo: "Formação dos multiplicadores",
-      texto: "Curso online com quatro módulos, avaliações e certificado. Acesso com o código fornecido pela coordenação.",
-      href: "/formacao",
-      rotulo: "Área dos estagiários",
-      externo: false,
-    },
-  ];
-  return (
-    <section className="sec acessos" aria-labelledby="acessos-tit">
-      <div className="wrap">
-        <div className="sec-cab sec-cab--claro">
-          <h2 className="h2" id="acessos-tit">
-            Acompanhe o projeto
-          </h2>
-        </div>
-        <ul className="acessos-grade">
-          {itens.map((it) => (
-            <li key={it.titulo}>
-              <a
-                href={it.href}
-                {...(it.externo ? ext : {})}
-                onClick={it.externo ? undefined : onFormacao}
-              >
-                <span className="ac-icon">{it.icon}</span>
-                <span className="ac-tit">
-                  {it.titulo}
-                  {it.externo && <IconExternal className="ac-ext" width="16" height="16" />}
+        <h3 className="sub sub--acessos">Acompanhe o projeto</h3>
+        <ul className="acessos">
+          {acessos.map((a) => (
+            <li key={a.titulo}>
+              <a href={a.href} {...(a.ext ? ext : {})} onClick={a.ext ? undefined : onFormacao}>
+                <span className="ac-icon">{a.icon}</span>
+                <span className="ac-txt">
+                  <span className="ac-tit">
+                    {a.titulo}
+                    {a.ext && <IconExternal width="15" height="15" className="ac-ext" />}
+                  </span>
+                  <span className="ac-desc">{a.texto}</span>
                 </span>
-                <span className="ac-txt">{it.texto}</span>
-                <span className="ac-rot">{it.rotulo}</span>
               </a>
             </li>
           ))}
@@ -956,47 +1120,48 @@ function Acessos({ onFormacao }) {
   );
 }
 
-/* ───────────────────────── Ficha técnica ───────────────────────── */
+/* ───────────────────────── Quem faz ───────────────────────── */
 
-function Ficha() {
+function Equipe() {
   return (
-    <section className="sec ficha" id="equipe" aria-labelledby="ficha-tit">
+    <section className="ch" id="equipe" aria-labelledby="eq-tit">
       <div className="wrap">
-        <figure className="ficha-foto">
-          <Img src="/img/equipe.webp" w={2200} h={1237} alt="Estagiários, professores e coordenação do Projeto Asa Verde reunidos" />
-        </figure>
-        <div className="sec-cab">
-          <h2 className="h2" id="ficha-tit">
+        <Foto className="eq-foto" f={{ src: "/img/equipe.webp", w: 2200, h: 1237, alt: "Estagiários, professores e coordenação do Projeto Asa Verde reunidos", legenda: "Estagiários, professores orientadores e coordenação do ciclo 2026" }} />
+        <div className="eq-cab">
+          <h2 className="eq-tit" id="eq-tit">
             Quem faz o Asa Verde
           </h2>
-          <p>
-            104 estudantes dos cursos técnicos integrados de Meio Ambiente e Informática do IFPB –
-            Campus Santa Rita atuaram no ciclo 2026: 84 nas equipes das unidades e 20 nas equipes de
-            Planejamento e de Mídia, com a supervisão de professoras e professores das 17 unidades.
-          </p>
+          <div className="prosa">
+            <p>
+              104 estudantes dos cursos técnicos integrados de Meio Ambiente e Informática do IFPB – Campus Santa Rita atuaram no ciclo 2026: 84 nas equipes das unidades e 20 nas equipes de Planejamento
+              e de Mídia, com a supervisão de professoras e professores das 17 unidades.
+            </p>
+          </div>
         </div>
-        <div className="ficha-grade">
+        <div className="ficha">
           {FICHA.map((f) => (
             <div key={f.instituicao}>
-              <h3 className="mini-tit">{f.instituicao}</h3>
+              <h3 className="sub">{f.instituicao}</h3>
               <ul className="pessoas">
                 {f.pessoas.map(([nome, cargo]) => (
                   <li key={nome}>
-                    <strong>{nome}</strong>
+                    <span>{nome}</span>
                     <span>{cargo}</span>
                   </li>
                 ))}
               </ul>
             </div>
           ))}
-        </div>
-        <div className="orientadores">
-          <h3 className="mini-tit">Orientação pedagógica, professores do IFPB</h3>
-          <ul>
-            {ORIENTADORES.map((n) => (
-              <li key={n}>{n}</li>
-            ))}
-          </ul>
+          <div>
+            <h3 className="sub">Professores orientadores (IFPB)</h3>
+            <ul className="pessoas pessoas--simples">
+              {ORIENTADORES.map((n) => (
+                <li key={n}>
+                  <span>{n}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
       </div>
     </section>
@@ -1007,25 +1172,25 @@ function Ficha() {
 
 function Rodape({ onFormacao }) {
   return (
-    <footer className="rodape">
+    <footer className="rod">
       <div className="wrap">
-        <div className="rod-topo">
-          <img className="rod-logo" src="/logos/asaverde_white.webp" width="692" height="400" alt="Projeto Asa Verde" loading="lazy" />
-          <p className="rod-lema">A educação ambiental planta hoje o mundo que queremos amanhã.</p>
-        </div>
+        <p className="rod-lema">A educação ambiental planta hoje o mundo que queremos amanhã.</p>
         <div className="rod-cols">
+          <div className="rod-marca">
+            <img src="/logos/asaverde_white.webp" width="692" height="400" alt="Projeto Asa Verde" loading="lazy" />
+            <p>Santa Rita – PB · Educação ambiental nas escolas públicas desde 2025.</p>
+          </div>
           <div>
-            <h2 className="rod-tit">Navegação</h2>
-            <ul>
-              {NAV.map((n) => (
-                <li key={n.href}>
-                  <a href={n.href}>{n.label}</a>
+            <h2 className="rod-tit">Capítulos</h2>
+            <ol>
+              {CAPITULOS.map((c) => (
+                <li key={c.id}>
+                  <a href={`#${c.id}`}>
+                    <span>{c.n}</span> {c.nome}
+                  </a>
                 </li>
               ))}
-              <li>
-                <a href="#equipe">Quem faz</a>
-              </li>
-            </ul>
+            </ol>
           </div>
           <div>
             <h2 className="rod-tit">Acessos</h2>
@@ -1050,18 +1215,13 @@ function Rodape({ onFormacao }) {
                   Formação dos multiplicadores
                 </a>
               </li>
-            </ul>
-          </div>
-          <div>
-            <h2 className="rod-tit">Relatórios</h2>
-            <ul>
               <li>
-                <a href={LINKS.relatorio2026} download="Projeto-Asa-Verde-Relatorio-de-Impacto-2026.pdf">
+                <a href={LINKS.relatorio2026} download={LINKS.arquivo2026}>
                   Relatório de Impacto 2026
                 </a>
               </li>
               <li>
-                <a href={LINKS.relatorio2025} download="Projeto-Asa-Verde-Relatorio-de-Impacto-2025.pdf">
+                <a href={LINKS.relatorio2025} download={LINKS.arquivo2025}>
                   Relatório de Impacto 2025
                 </a>
               </li>
@@ -1069,14 +1229,13 @@ function Rodape({ onFormacao }) {
           </div>
           <div>
             <h2 className="rod-tit">Realização</h2>
-            <p>
-              Ministério Público da Paraíba, Prefeitura Municipal de Santa Rita e Instituto Federal
-              da Paraíba – Campus Santa Rita. Apoio: SEMMA e COOREMM.
-            </p>
+            <p>Ministério Público da Paraíba, Prefeitura Municipal de Santa Rita e Instituto Federal da Paraíba – Campus Santa Rita.</p>
+            <p>Apoio: Secretaria Municipal de Meio Ambiente (SEMMA) e COOREMM.</p>
           </div>
         </div>
         <p className="rod-base">
-          <span>Projeto Asa Verde, Santa Rita – PB</span>
+          <span>Projeto Asa Verde · Santa Rita – PB</span>
+          <span>Fotografias: equipes de estagiários e equipe de Mídia do projeto</span>
           <span>{new Date().getFullYear()}</span>
         </p>
       </div>
@@ -1087,6 +1246,23 @@ function Rodape({ onFormacao }) {
 /* ───────────────────────── Página ───────────────────────── */
 
 export default function Site({ navigate }) {
+  const [ativo, setAtivo] = useState(null);
+
+  useEffect(() => {
+    const secs = CAPITULOS.map((c) => document.getElementById(c.id)).filter(Boolean);
+    if (!secs.length || !("IntersectionObserver" in window)) return;
+    const io = new IntersectionObserver(
+      (es) => {
+        es.forEach((e) => {
+          if (e.isIntersecting) setAtivo(e.target.id);
+        });
+      },
+      { rootMargin: "-40% 0px -55% 0px", threshold: 0 }
+    );
+    secs.forEach((s) => io.observe(s));
+    return () => io.disconnect();
+  }, []);
+
   const onFormacao = (e) => {
     if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return;
     e.preventDefault();
@@ -1094,29 +1270,24 @@ export default function Site({ navigate }) {
   };
 
   return (
-    <div className="site">
+    <div className="pg">
       <a className="pular" href="#conteudo">
         Pular para o conteúdo
       </a>
-      <Header onFormacao={onFormacao} />
+      <Topo onFormacao={onFormacao} ativo={ativo} />
       <main id="conteudo">
-        <Hero />
-        <Parceiros />
+        <Capa />
+        <Realizacao />
         <Projeto />
         <Numeros />
-        <Evolucao />
-        <ComoFunciona />
         <Eixos />
-        <Infantil />
         <Territorio />
-        <LinhaDoTempo />
-        <Acompanhamento />
+        <Tempo />
         <Vozes />
         <Galeria />
         <Imprensa />
-        <Relatorios />
-        <Acessos onFormacao={onFormacao} />
-        <Ficha />
+        <Relatorios onFormacao={onFormacao} />
+        <Equipe />
       </main>
       <Rodape onFormacao={onFormacao} />
     </div>

@@ -31,6 +31,7 @@
   --topo: 72px;
   --gut: clamp(20px, 4vw, 56px);
   --max: 1320px;
+  --leg: 0.84rem;
 
   color-scheme: light;
   font-family: var(--serif);
@@ -48,6 +49,29 @@
 
 html:has(.pg) {
   background: #f0f1ec;
+  font-size: 100%; /* celular: 16 px */
+}
+
+/* ---------- escala tipográfica por tipo de tela ----------
+   Todos os tamanhos do site estão em rem, então mudar a raiz
+   amplia ou reduz o conjunto inteiro de forma proporcional. */
+
+@media (min-width: 768px) {
+  html:has(.pg) {
+    font-size: 106.25%; /* tablet: 17 px */
+  }
+}
+
+@media (min-width: 1200px) {
+  html:has(.pg) {
+    font-size: 118.75%; /* computador: 19 px */
+  }
+}
+
+@media (min-width: 1680px) {
+  html:has(.pg) {
+    font-size: 125%; /* telas grandes: 20 px */
+  }
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -141,7 +165,7 @@ html:has(.pg) {
 
 .pg .sub {
   font-family: var(--display);
-  font-size: 0.82rem;
+  font-size: 0.86rem;
   font-weight: 600;
   letter-spacing: 0.01em;
   color: var(--cinza);
@@ -168,7 +192,7 @@ html:has(.pg) {
 
 .pg .nota {
   font-family: var(--display);
-  font-size: 0.8rem;
+  font-size: 0.86rem;
   line-height: 1.55;
   color: var(--cinza);
   max-width: 76ch;
@@ -328,7 +352,7 @@ html:has(.pg) {
   padding-top: 8px;
   border-top: 1px solid var(--fio);
   font-family: var(--display);
-  font-size: 0.78rem;
+  font-size: var(--leg);
   line-height: 1.45;
   color: var(--cinza);
 }
@@ -440,8 +464,20 @@ html:has(.pg) {
   }
 }
 
+/* Cabeçalho: no tablet some a linha da edição; no celular fica só a marca e o menu */
+.pg .marca span,
+.pg .topo-form,
+.pg .topo-ed {
+  white-space: nowrap;
+}
+
+@media (max-width: 1099px) {
+  .pg .topo-ed {
+    display: none;
+  }
+}
+
 @media (max-width: 760px) {
-  .pg .topo-ed,
   .pg .topo-form {
     display: none;
   }
@@ -533,6 +569,14 @@ html:has(.pg) {
     padding-left: 18px;
     mix-blend-mode: difference;
     color: #fff;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+  }
+
+  .pg .trilho--on {
+    opacity: 1;
+    pointer-events: auto;
   }
 
   .pg .trilho a {
@@ -914,7 +958,7 @@ html:has(.pg) {
 }
 
 .pg .real-g img {
-  height: 52px;
+  height: 2.9rem;
   width: auto;
   filter: grayscale(1) contrast(1.05);
   opacity: 0.82;
@@ -971,7 +1015,7 @@ html:has(.pg) {
   justify-content: space-between;
   gap: 16px;
   font-family: var(--display);
-  font-size: 0.8rem;
+  font-size: 0.86rem;
   font-weight: 600;
   letter-spacing: 0.01em;
   color: var(--cinza);
@@ -1894,7 +1938,7 @@ html:has(.pg) {
 .pg .mapa figcaption {
   margin-top: 10px;
   font-family: var(--display);
-  font-size: 0.78rem;
+  font-size: var(--leg);
   color: var(--cinza);
 }
 
@@ -2571,7 +2615,7 @@ html:has(.pg) {
   padding-top: 8px;
   border-top: 1px solid var(--fio);
   font-family: var(--display);
-  font-size: 0.78rem;
+  font-size: var(--leg);
   line-height: 1.4;
   color: var(--cinza);
 }
@@ -3298,5 +3342,11 @@ html:has(.pg) {
 @media (min-width: 1000px) {
   .pg .ficha > div:last-child {
     grid-column: 4;
+  }
+}
+
+@media (min-width: 1680px) {
+  .pg {
+    --max: 1480px;
   }
 }

@@ -186,7 +186,7 @@ function Topo({ onFormacao, ativo }) {
         </a>
       </nav>
 
-      <nav className="trilho" aria-label="Capítulos">
+      <nav className={`trilho${ativo ? " trilho--on" : ""}`} aria-label="Capítulos">
         <ol>
           {CAPITULOS.map((c) => (
             <li key={c.id}>

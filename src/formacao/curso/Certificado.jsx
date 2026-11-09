@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { CONFIG, NUCLEO, MODULOS } from "./index.js";
+import { CONFIG, NUCLEO, MODULOS, COMUNIDADE } from "./index.js";
 import * as P from "./progresso.js";
 import { Topo } from "./Comum.jsx";
 import { PARCEIROS } from "./config.js";
@@ -9,7 +9,9 @@ const dataLonga = (iso) => new Date(iso).toLocaleDateString("pt-BR", { day: "num
 
 export default function Certificado({ conta, ir, onSair, moduloId }) {
   const trilha = MODULOS[moduloId];
-  const liberado = trilha && trilha.id !== NUCLEO.id && P.certificadoLiberado(conta, trilha.id);
+  // O certificado do núcleo comum é o do percurso "Conhecer o projeto", aberto à comunidade.
+  const aberto = moduloId === NUCLEO.id;
+  const liberado = Boolean(trilha) && P.certificadoLiberado(conta, trilha.id);
 
   useEffect(() => {
     if (!liberado) return;
@@ -24,7 +26,7 @@ export default function Certificado({ conta, ir, onSair, moduloId }) {
         <main className="fm-shell fm-bloqueio">
           <Cadeado width="40" height="40" />
           <h1>Certificado ainda não disponível</h1>
-          <p>O certificado é emitido depois da aprovação nas avaliações do núcleo comum e da trilha.</p>
+          <p>O certificado é emitido depois da aprovação nas avaliações do seu percurso.</p>
           <button type="button" className="fm-btn fm-btn--escuro" onClick={() => ir("#/")}>
             Voltar ao painel <Seta />
           </button>
@@ -37,7 +39,10 @@ export default function Certificado({ conta, ir, onSair, moduloId }) {
   const avNucleo = P.avaliacao(conta, NUCLEO.id);
   const data = avTrilha.data || new Date().toISOString();
   const codigo = P.codigoCertificado(conta.nome, trilha.id, data);
-  const media = Math.round(((avTrilha.melhor + avNucleo.melhor) / 2) * 100);
+  const media = Math.round((aberto ? avNucleo.melhor : (avTrilha.melhor + avNucleo.melhor) / 2) * 100);
+  const nomePercurso = aberto ? COMUNIDADE.nome : trilha.nome;
+  const horas = aberto ? COMUNIDADE.horas : trilha.horas;
+  const tipo = aberto ? "percurso" : "trilha";
 
   return (
     <div className="fm-app fm-app--cert">
@@ -73,12 +78,12 @@ export default function Certificado({ conta, ir, onSair, moduloId }) {
             <img className="fm-folha-logo" src="/logos/asaverde_white.webp" width="692" height="400" alt="Projeto Asa Verde" />
             <div className="fm-folha-trilha">
               <span>Formação Asa Verde {new Date(data).getFullYear()}</span>
-              <strong>{trilha.nome}</strong>
+              <strong>{nomePercurso}</strong>
             </div>
             <dl className="fm-folha-dados">
               <div>
                 <dt>Carga horária</dt>
-                <dd>{trilha.horas} horas</dd>
+                <dd>{horas} horas</dd>
               </div>
               <div>
                 <dt>Aproveitamento</dt>
@@ -95,10 +100,17 @@ export default function Certificado({ conta, ir, onSair, moduloId }) {
             <h2 className="fm-folha-tit">Certificado</h2>
             <p className="fm-folha-txt">Certificamos que</p>
             <p className="fm-folha-nome">{conta.nome}</p>
-            <p className="fm-folha-txt">
-              concluiu a <strong>Formação Asa Verde</strong>, trilha <strong>{trilha.nome}</strong>, composta pelo núcleo comum sobre o projeto e pelas lições específicas da sua
-              função, com aprovação nas avaliações e carga horária de <strong>{trilha.horas} horas</strong>.
-            </p>
+            {aberto ? (
+              <p className="fm-folha-txt">
+                concluiu o percurso <strong>Conhecer o projeto</strong> da <strong>Formação Asa Verde</strong>, com as lições do núcleo comum sobre a origem, as instituições, o método
+                e os resultados do Projeto Asa Verde, com aprovação na avaliação e carga horária de <strong>{horas} horas</strong>.
+              </p>
+            ) : (
+              <p className="fm-folha-txt">
+                concluiu a <strong>Formação Asa Verde</strong>, trilha <strong>{trilha.nome}</strong>, composta pelo núcleo comum sobre o projeto e pelas lições específicas da sua
+                função, com aprovação nas avaliações e carga horária de <strong>{horas} horas</strong>.
+              </p>
+            )}
             <p className="fm-folha-local">Santa Rita (PB), {dataLonga(data)}.</p>
 
             <div className="fm-folha-ass">
@@ -124,11 +136,11 @@ export default function Certificado({ conta, ir, onSair, moduloId }) {
           <div className="fm-verso-cab">
             <h2>Conteúdo programático</h2>
             <p>
-              {conta.nome}, trilha {trilha.nome}, {trilha.horas} horas. Código {codigo}.
+              {conta.nome}, {tipo} {nomePercurso}, {horas} horas. Código {codigo}.
             </p>
           </div>
           <div className="fm-verso-cols">
-            {[NUCLEO, trilha].map((m) => (
+            {(aberto ? [NUCLEO] : [NUCLEO, trilha]).map((m) => (
               <section key={m.id}>
                 <h3>{m.id === NUCLEO.id ? "Núcleo comum: O Asa Verde" : `Trilha: ${m.nome}`}</h3>
                 <ol>
@@ -144,6 +156,15 @@ export default function Certificado({ conta, ir, onSair, moduloId }) {
                 </p>
               </section>
             ))}
+            {aberto && (
+              <section>
+                <h3>Sobre o Projeto Asa Verde</h3>
+                <p className="fm-verso-sobre">
+                  O Projeto Asa Verde leva a educação ambiental às escolas públicas de Santa Rita (PB) por meio de estudantes do IFPB que atuam como multiplicadores ambientais. Em
+                  2026, atendeu 17 unidades educacionais, com 104 multiplicadores, 3.194 ações registradas e 41.506 participações de estudantes e crianças.
+                </p>
+              </section>
+            )}
           </div>
           <p className="fm-verso-rodape">
             A Formação Asa Verde é oferecida pelo Projeto Asa Verde, iniciativa do Ministério Público da Paraíba com a Prefeitura Municipal de Santa Rita, por meio da Secretaria
@@ -159,12 +180,12 @@ export default function Certificado({ conta, ir, onSair, moduloId }) {
             <dd>{conta.nome}</dd>
           </div>
           <div>
-            <dt>Trilha</dt>
-            <dd>{trilha.nome}</dd>
+            <dt>{aberto ? "Percurso" : "Trilha"}</dt>
+            <dd>{nomePercurso}</dd>
           </div>
           <div>
             <dt>Carga horária</dt>
-            <dd>{trilha.horas} horas</dd>
+            <dd>{horas} horas</dd>
           </div>
           <div>
             <dt>Concluído em</dt>

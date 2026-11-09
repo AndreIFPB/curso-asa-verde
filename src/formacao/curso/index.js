@@ -12,6 +12,21 @@ export const TRILHAS = [MULTIPLICADOR, MIDIA, PLANEJAMENTO, ORIENTADORES, SUPERV
 
 export const MODULOS = { [NUCLEO.id]: NUCLEO, ...Object.fromEntries(TRILHAS.map((t) => [t.id, t])) };
 
+// Percurso aberto a qualquer pessoa: só o núcleo comum, sem código de acesso.
+// Não é um módulo: quem escolhe este perfil faz o NUCLEO e recebe um certificado próprio.
+export const COMUNIDADE = {
+  id: "comunidade",
+  nome: "Conhecer o projeto",
+  publico: "Aberto a qualquer pessoa interessada",
+  descricao:
+    "Para familiares, estudantes, professores de outras escolas, pesquisadores e demais interessados. Você faz as lições do núcleo comum, conhece o Asa Verde por dentro e recebe um certificado de conclusão.",
+  horas: CONFIG.horasComunidade,
+  foto: { src: "/img/gal-ciranda.webp", w: 1600, h: 922, alt: "Ciranda de crianças e estagiários no pátio" },
+};
+
+// Dados de exibição do perfil da pessoa (trilha de função ou percurso aberto).
+export const perfilDe = (id) => (id === COMUNIDADE.id ? COMUNIDADE : MODULOS[id] && id !== NUCLEO.id ? MODULOS[id] : null);
+
 // Posições dos marcadores no mapa (% da imagem /img/mapa.webp).
 export const UNIDADES = [
   { n: "01", nome: "EMEF e EJA Aníbal Limeira", bairro: "Jardim Europa", tipo: "escola", x: 47.65, y: 47.79 },

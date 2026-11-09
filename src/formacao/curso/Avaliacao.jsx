@@ -65,8 +65,11 @@ export default function Avaliacao({ conta, setConta, ir, onSair, moduloId }) {
     window.scrollTo(0, 0);
   };
 
+  // Para o perfil aberto à comunidade, o núcleo comum é o percurso inteiro.
+  const fimDoPercurso = modulo.id !== NUCLEO.id || P.ehComunidade(conta);
+
   const proximoDepois = () => {
-    if (modulo.id === NUCLEO.id) {
+    if (modulo.id === NUCLEO.id && !P.ehComunidade(conta)) {
       const trilha = MODULOS[conta.perfil];
       const primeira = trilha.licoes.find((l) => !P.licaoFeita(conta, l.id)) || trilha.licoes[0];
       ir(`#/licao/${trilha.id}/${primeira.id}`);
@@ -84,7 +87,11 @@ export default function Avaliacao({ conta, setConta, ir, onSair, moduloId }) {
       <div className="fm-av-aviso">
         <Cadeado width="32" height="32" />
         <h2>Avaliação bloqueada</h2>
-        <p>A trilha é liberada depois da aprovação na avaliação do núcleo comum.</p>
+        <p>
+          {P.ehComunidade(conta)
+            ? "As trilhas são para quem atua no projeto. Para abrir uma trilha, informe no painel o código de acesso fornecido pela coordenação."
+            : "A trilha é liberada depois da aprovação na avaliação do núcleo comum."}
+        </p>
         <button type="button" className="fm-btn fm-btn--escuro" onClick={() => ir("#/")}>
           Voltar ao painel <Seta />
         </button>
@@ -106,15 +113,17 @@ export default function Avaliacao({ conta, setConta, ir, onSair, moduloId }) {
             <h2>{resultado.passou ? "Aprovado." : "Ainda não foi desta vez."}</h2>
             <p>
               {resultado.passou
-                ? modulo.id === NUCLEO.id
+                ? !fimDoPercurso
                   ? "Você concluiu o núcleo comum. A sua trilha está liberada."
-                  : "Você concluiu a trilha. O seu certificado está disponível."
+                  : modulo.id === NUCLEO.id
+                    ? "Você concluiu o núcleo comum e conheceu o Asa Verde por dentro. O seu certificado está disponível."
+                    : "Você concluiu a trilha. O seu certificado está disponível."
                 : `É preciso acertar ${pct}% das questões. ${restAgora > 0 ? `Você ainda tem ${restAgora} tentativa${restAgora > 1 ? "s" : ""}.` : "As tentativas acabaram: procure a coordenação do projeto."}`}
             </p>
             <div className="fm-res-acoes">
               {resultado.passou ? (
                 <button type="button" className="fm-btn fm-btn--escuro" onClick={proximoDepois}>
-                  {modulo.id === NUCLEO.id ? "Começar a trilha" : "Ver o certificado"} <Seta />
+                  {fimDoPercurso ? "Ver o certificado" : "Começar a trilha"} <Seta />
                 </button>
               ) : (
                 restAgora > 0 && (
@@ -190,7 +199,7 @@ export default function Avaliacao({ conta, setConta, ir, onSair, moduloId }) {
         </p>
         <div className="fm-res-acoes">
           <button type="button" className="fm-btn fm-btn--escuro" onClick={proximoDepois}>
-            {modulo.id === NUCLEO.id ? "Ir para a trilha" : "Ver o certificado"} <Seta />
+            {fimDoPercurso ? "Ver o certificado" : "Ir para a trilha"} <Seta />
           </button>
           <button type="button" className="fm-btn fm-btn--linha" onClick={() => ir("#/")}>
             Voltar ao painel

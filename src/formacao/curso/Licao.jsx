@@ -119,7 +119,11 @@ export default function Licao({ conta, setConta, ir, onSair, moduloId, licaoId }
         <main className="fm-shell fm-bloqueio">
           <Cadeado width="40" height="40" />
           <h1>Esta trilha ainda está bloqueada</h1>
-          <p>A trilha {modulo.nome} é liberada depois da aprovação na avaliação do núcleo comum.</p>
+          <p>
+            {P.ehComunidade(conta)
+              ? `A trilha ${modulo.nome} é para quem atua no projeto. Para abri-la, informe no painel o código de acesso fornecido pela coordenação.`
+              : `A trilha ${modulo.nome} é liberada depois da aprovação na avaliação do núcleo comum.`}
+          </p>
           <button type="button" className="fm-btn fm-btn--escuro" onClick={() => ir("#/")}>
             Voltar ao painel <Seta />
           </button>

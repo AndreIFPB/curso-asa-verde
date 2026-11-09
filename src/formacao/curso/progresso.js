@@ -1,7 +1,7 @@
 // Progresso salvo no navegador de quem faz o curso.
 // Cada pessoa é identificada pelo nome digitado na entrada.
 
-import { CONFIG, NUCLEO, MODULOS } from "./index.js";
+import { CONFIG, NUCLEO, MODULOS, COMUNIDADE } from "./index.js";
 
 const CHAVE = "asaverde:formacao:v3";
 
@@ -88,18 +88,27 @@ export function tentativasRestantes(conta, moduloId) {
   return a.aprovado ? 0 : Math.max(0, CONFIG.tentativas - a.tentativas);
 }
 
+// Perfil aberto à comunidade: faz só o núcleo comum.
+export const ehComunidade = (conta) => conta?.perfil === COMUNIDADE.id;
+
+// As trilhas de função exigem o perfil de função (com código) e a aprovação no núcleo.
 export function trilhaLiberada(conta) {
-  return aprovado(conta, NUCLEO.id);
+  return !ehComunidade(conta) && aprovado(conta, NUCLEO.id);
 }
 
+// Certificado da trilha de função, ou do núcleo comum para o perfil aberto à comunidade.
 export function certificadoLiberado(conta, trilhaId) {
+  if (trilhaId === NUCLEO.id) return ehComunidade(conta) && aprovado(conta, NUCLEO.id);
   return aprovado(conta, NUCLEO.id) && aprovado(conta, trilhaId);
 }
 
 // Percentual geral do percurso do perfil: lições + avaliações do núcleo e da trilha.
 export function percentual(conta) {
+  if (ehComunidade(conta)) {
+    return Math.round(((licoesFeitas(conta, NUCLEO) + (aprovado(conta, NUCLEO.id) ? 1 : 0)) / (NUCLEO.licoes.length + 1)) * 100);
+  }
   const trilha = MODULOS[conta.perfil];
-  if (!trilha) return 0;
+  if (!trilha || trilha.id === NUCLEO.id) return 0;
   const total = NUCLEO.licoes.length + trilha.licoes.length + 2;
   const feito =
     licoesFeitas(conta, NUCLEO) + licoesFeitas(conta, trilha) + (aprovado(conta, NUCLEO.id) ? 1 : 0) + (aprovado(conta, trilha.id) ? 1 : 0);
@@ -108,7 +117,7 @@ export function percentual(conta) {
 
 // Próximo passo sugerido no percurso do perfil.
 export function proximoPasso(conta) {
-  const trilha = MODULOS[conta.perfil];
+  const trilha = ehComunidade(conta) || conta.perfil === NUCLEO.id ? null : MODULOS[conta.perfil];
   for (const modulo of [NUCLEO, trilha]) {
     if (!modulo) continue;
     if (modulo.id !== NUCLEO.id && !trilhaLiberada(conta)) break;
@@ -117,6 +126,7 @@ export function proximoPasso(conta) {
     if (!aprovado(conta, modulo.id)) return { tipo: "avaliacao", modulo };
   }
   if (trilha && certificadoLiberado(conta, trilha.id)) return { tipo: "certificado", modulo: trilha };
+  if (ehComunidade(conta) && certificadoLiberado(conta, NUCLEO.id)) return { tipo: "certificado", modulo: NUCLEO };
   return null;
 }
 

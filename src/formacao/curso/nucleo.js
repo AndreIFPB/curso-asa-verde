@@ -6,7 +6,7 @@ export const NUCLEO = {
   nome: "O Asa Verde",
   subtitulo: "Núcleo comum",
   descricao:
-    "A origem, a missão, as instituições, a forma de trabalho e os resultados do projeto. Obrigatório para todos os perfis antes da trilha específica.",
+    "A origem, a missão, as instituições, a forma de trabalho e os resultados do projeto. É a base de todas as trilhas e o percurso de quem quer conhecer o Asa Verde.",
   foto: { src: "/img/capa.webp", w: 1216, h: 1720, alt: "Mãos de criança pintadas de verde carimbando um painel coletivo" },
   licoes: [
     {

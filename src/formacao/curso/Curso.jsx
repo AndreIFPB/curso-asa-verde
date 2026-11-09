@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import "./curso.css";
-import { CONFIG, NUCLEO, TRILHAS, MODULOS, minutosModulo } from "./index.js";
+import { CONFIG, NUCLEO, TRILHAS, MODULOS, COMUNIDADE, perfilDe, minutosModulo } from "./index.js";
 import * as P from "./progresso.js";
-import { ICONE_TRILHA, Seta, Check, Cadeado, Relogio, Livro, Medalha, Lista, Refazer } from "./icones.jsx";
+import { ICONE_TRILHA, Seta, Check, Cadeado, Relogio, Livro, Medalha, Lista, Refazer, Globo } from "./icones.jsx";
 import { Topo, Rodape } from "./Comum.jsx";
 import Licao from "./Licao.jsx";
 import Avaliacao from "./Avaliacao.jsx";
@@ -58,15 +58,19 @@ function Entrada({ onEntrar, onSite }) {
     setTimeout(() => nomeRef.current?.focus({ preventScroll: true }), 450);
   };
 
+  const aberto = perfil === COMUNIDADE.id;
+
   const enviar = (e) => {
     e.preventDefault();
     if (nome.trim().split(/\s+/).length < 2) return setErro("Digite o seu nome completo, como deve aparecer no certificado.");
-    if (codigo.trim().toLowerCase() !== CONFIG.codigoAcesso.toLowerCase()) return setErro("O código de acesso não confere. Confira com a coordenação do projeto.");
-    if (!perfil) return setErro("Escolha a sua função no projeto para abrir a trilha certa.");
+    if (!perfil) return setErro("Escolha a sua função no projeto ou a opção para conhecer o projeto.");
+    if (!aberto && codigo.trim().toLowerCase() !== CONFIG.codigoAcesso.toLowerCase())
+      return setErro("O código de acesso não confere. Confira com a coordenação do projeto.");
     onEntrar(nome, perfil);
   };
 
   const totalLicoes = NUCLEO.licoes.length + TRILHAS.reduce((s, t) => s + t.licoes.length, 0);
+  const minNucleo = Math.round(minutosModulo(NUCLEO) / 5) * 5;
 
   return (
     <div className="fm-entrada">
@@ -83,7 +87,7 @@ function Entrada({ onEntrar, onSite }) {
           <div className="fm-hero-lado">
             <p>
               O curso de quem faz o projeto acontecer. Um núcleo comum sobre o Asa Verde e trilhas específicas para multiplicadores, equipes de Mídia e de Planejamento, professores
-              orientadores, supervisores e direção das unidades.
+              orientadores, supervisores e direção das unidades. Quem não atua no projeto também pode fazer o núcleo comum para conhecer o Asa Verde.
             </p>
             <div className="fm-hero-cta">
               <a className="fm-btn fm-btn--cit" href="#entrar" onClick={(e) => (e.preventDefault(), formRef.current?.scrollIntoView({ behavior: "smooth" }))}>
@@ -134,7 +138,7 @@ function Entrada({ onEntrar, onSite }) {
                 <Livro />
               </span>
               <strong>Núcleo comum</strong>
-              <p>Quatro lições sobre a origem, as instituições, o método e os resultados do Asa Verde. Obrigatório para todos.</p>
+              <p>Quatro lições sobre a origem, as instituições, o método e os resultados do Asa Verde. É a base de todas as trilhas e está aberto a qualquer pessoa.</p>
             </li>
             <li>
               <span className="fm-percurso-ic">
@@ -155,7 +159,7 @@ function Entrada({ onEntrar, onSite }) {
                 <Medalha />
               </span>
               <strong>Certificado</strong>
-              <p>Emitido com o seu nome e a carga horária da trilha, pronto para imprimir ou salvar em PDF.</p>
+              <p>Emitido com o seu nome e a carga horária do percurso, pronto para imprimir ou salvar em PDF.</p>
             </li>
           </ol>
         </div>
@@ -210,6 +214,44 @@ function Entrada({ onEntrar, onSite }) {
               );
             })}
           </ul>
+
+          <article className={`fm-aberto${aberto ? " sel" : ""}`} aria-labelledby="fm-aberto-tit">
+            <div className="fm-aberto-foto">
+              <img src={COMUNIDADE.foto.src} width={COMUNIDADE.foto.w} height={COMUNIDADE.foto.h} alt="" loading="lazy" />
+            </div>
+            <div className="fm-aberto-txt">
+              <p className="fm-sobre">
+                <Globo width="18" height="18" /> Aberto à comunidade
+              </p>
+              <h3 id="fm-aberto-tit">Não atua no projeto? Venha conhecer o Asa Verde.</h3>
+              <p>{COMUNIDADE.descricao}</p>
+              <ul className="fm-aberto-meta">
+                <li>
+                  <Livro width="18" height="18" /> {NUCLEO.licoes.length} lições do núcleo comum
+                </li>
+                <li>
+                  <Relogio width="18" height="18" /> cerca de {minNucleo} min
+                </li>
+                <li>
+                  <Medalha width="18" height="18" /> certificado de {COMUNIDADE.horas} horas
+                </li>
+                <li>
+                  <Check width="18" height="18" /> sem código de acesso
+                </li>
+              </ul>
+              <button type="button" className="fm-btn fm-btn--cit" onClick={() => escolher(COMUNIDADE.id)} aria-pressed={aberto}>
+                {aberto ? (
+                  <>
+                    <Check /> Opção escolhida
+                  </>
+                ) : (
+                  <>
+                    Quero conhecer o projeto <Seta />
+                  </>
+                )}
+              </button>
+            </div>
+          </article>
         </div>
       </section>
 
@@ -219,7 +261,10 @@ function Entrada({ onEntrar, onSite }) {
             <h2 id="fm-login-tit" className="fm-h2">
               Entre na formação
             </h2>
-            <p>Use o código fornecido pela coordenação. O seu progresso fica salvo neste navegador: entre sempre com o mesmo nome e no mesmo aparelho para continuar de onde parou.</p>
+            <p>
+              Quem atua no projeto usa o código fornecido pela coordenação. Para apenas conhecer o Asa Verde, não é preciso código. O seu progresso fica salvo neste navegador: entre
+              sempre com o mesmo nome e no mesmo aparelho para continuar de onde parou.
+            </p>
             <p className="fm-nota">
               Fez a formação de 2026 e precisa reimprimir o certificado? <a href="/formacao/2026">Acesse o curso anterior</a>.
             </p>
@@ -229,12 +274,8 @@ function Entrada({ onEntrar, onSite }) {
               <span>Nome completo</span>
               <input ref={nomeRef} type="text" autoComplete="name" value={nome} onChange={(e) => (setNome(e.target.value), setErro(""))} placeholder="Como deve aparecer no certificado" />
             </label>
-            <label>
-              <span>Código de acesso</span>
-              <input type="text" autoComplete="off" autoCapitalize="none" spellCheck="false" value={codigo} onChange={(e) => (setCodigo(e.target.value), setErro(""))} placeholder="Fornecido pela coordenação" />
-            </label>
             <fieldset>
-              <legend>Sua função no projeto</legend>
+              <legend>Como você participa</legend>
               <div className="fm-perfis">
                 {TRILHAS.map((t) => {
                   const Icone = ICONE_TRILHA[t.id];
@@ -246,8 +287,26 @@ function Entrada({ onEntrar, onSite }) {
                     </label>
                   );
                 })}
+                <label className={`fm-perfil-aberto${aberto ? " sel" : ""}`}>
+                  <input type="radio" name="perfil" value={COMUNIDADE.id} checked={aberto} onChange={() => (setPerfil(COMUNIDADE.id), setErro(""))} />
+                  <Globo />
+                  <span>
+                    Não atuo no projeto: quero conhecer o Asa Verde
+                    <small>Núcleo comum e certificado de {COMUNIDADE.horas} horas, sem código de acesso</small>
+                  </span>
+                </label>
               </div>
             </fieldset>
+            {aberto ? (
+              <p className="fm-form-nota">
+                <Check width="18" height="18" /> Você não precisa de código de acesso para conhecer o projeto.
+              </p>
+            ) : (
+              <label>
+                <span>Código de acesso</span>
+                <input type="text" autoComplete="off" autoCapitalize="none" spellCheck="false" value={codigo} onChange={(e) => (setCodigo(e.target.value), setErro(""))} placeholder="Fornecido pela coordenação" />
+              </label>
+            )}
             <div aria-live="assertive">{erro && <p className="fm-erro">{erro}</p>}</div>
             <button type="submit" className="fm-btn fm-btn--escuro fm-btn--largo">
               Entrar na formação <Seta />
@@ -359,14 +418,72 @@ function Modulo({ modulo, conta, bloqueado, ir, n }) {
   );
 }
 
+// Quem entrou para conhecer o projeto e passou a atuar nele informa o código e escolhe a função.
+function Migrar({ conta, setConta }) {
+  const [codigo, setCodigo] = useState("");
+  const [erro, setErro] = useState("");
+  const liberado = codigo.trim().toLowerCase() === CONFIG.codigoAcesso.toLowerCase();
+
+  const escolher = (id) => {
+    if (!liberado) return setErro("Digite o código de acesso fornecido pela coordenação para abrir a trilha.");
+    setConta(P.salvarConta({ ...conta, perfil: id }));
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  return (
+    <section className="fm-outras fm-migrar" aria-labelledby="fm-migrar-tit">
+      <div className="fm-outras-cab">
+        <div>
+          <h2 id="fm-migrar-tit">Passou a atuar no projeto?</h2>
+          <p>Informe o código de acesso fornecido pela coordenação e escolha a sua função. As lições e a avaliação do núcleo comum que você já fez são aproveitadas.</p>
+        </div>
+      </div>
+      <label className="fm-migrar-cod">
+        <span>Código de acesso</span>
+        <input
+          type="text"
+          autoComplete="off"
+          autoCapitalize="none"
+          spellCheck="false"
+          value={codigo}
+          onChange={(e) => (setCodigo(e.target.value), setErro(""))}
+          placeholder="Fornecido pela coordenação"
+        />
+      </label>
+      <div aria-live="assertive">{erro && <p className="fm-erro">{erro}</p>}</div>
+      <ul className={`fm-outras-lista${liberado ? "" : " espera"}`}>
+        {TRILHAS.map((t) => {
+          const Ic = ICONE_TRILHA[t.id];
+          return (
+            <li key={t.id}>
+              <button type="button" onClick={() => escolher(t.id)}>
+                <Ic />
+                <span>
+                  <strong>{t.nome}</strong>
+                  <span>{t.publico}</span>
+                </span>
+                {liberado ? <Seta width="18" height="18" /> : <Cadeado width="18" height="18" />}
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
+
 function Painel({ conta, setConta, ir, onSair }) {
-  const trilha = MODULOS[conta.perfil];
+  const aberto = P.ehComunidade(conta);
+  const perfil = perfilDe(conta.perfil) || COMUNIDADE;
+  const trilha = aberto ? null : perfil;
   const prox = P.proximoPasso(conta);
   const pct = P.percentual(conta);
   const liberada = P.trilhaLiberada(conta);
-  const cert = P.certificadoLiberado(conta, trilha.id);
+  const idCert = aberto ? NUCLEO.id : trilha.id;
+  const cert = P.certificadoLiberado(conta, idCert);
+  const nucleoOk = P.aprovado(conta, NUCLEO.id);
   const [trocando, setTrocando] = useState(false);
-  const IconeT = ICONE_TRILHA[trilha.id];
+  const IconeP = ICONE_TRILHA[perfil.id];
 
   const continuar = () => {
     if (!prox) return;
@@ -375,19 +492,32 @@ function Painel({ conta, setConta, ir, onSair }) {
     if (prox.tipo === "certificado") ir(`#/certificado/${prox.modulo.id}`);
   };
 
+  const feitasTotal = P.licoesFeitas(conta, NUCLEO) + (trilha ? P.licoesFeitas(conta, trilha) : 0);
   const rotuloProx = !prox
     ? null
     : prox.tipo === "licao"
-      ? { sobre: prox.modulo.id === NUCLEO.id ? "Núcleo comum" : prox.modulo.nome, titulo: prox.licao.titulo, acao: P.licoesFeitas(conta, NUCLEO) + P.licoesFeitas(conta, trilha) === 0 ? "Começar" : "Continuar" }
+      ? { sobre: prox.modulo.id === NUCLEO.id ? "Núcleo comum" : prox.modulo.nome, titulo: prox.licao.titulo, acao: feitasTotal === 0 ? "Começar" : "Continuar" }
       : prox.tipo === "avaliacao"
         ? { sobre: prox.modulo.id === NUCLEO.id ? "Núcleo comum" : prox.modulo.nome, titulo: "Avaliação", acao: "Fazer a avaliação" }
-        : { sobre: trilha.nome, titulo: "Certificado disponível", acao: "Ver o certificado" };
+        : { sobre: perfil.nome, titulo: "Certificado disponível", acao: "Ver o certificado" };
 
   const trocar = (id) => {
     setConta(P.salvarConta({ ...conta, perfil: id }));
     setTrocando(false);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
+
+  const textoBoas = aberto
+    ? pct === 0
+      ? "Comece pelas lições do núcleo comum. Depois da aprovação na avaliação, o seu certificado fica disponível."
+      : pct === 100
+        ? "Você concluiu o percurso. O seu certificado está disponível."
+        : "O seu progresso fica salvo neste navegador. Continue de onde parou."
+    : pct === 0
+      ? "Comece pelo núcleo comum. Depois da avaliação do núcleo, a sua trilha é liberada."
+      : pct === 100
+        ? "Você concluiu a formação. O seu certificado está disponível."
+        : "O seu progresso fica salvo neste navegador. Continue de onde parou.";
 
   return (
     <div className="fm-app">
@@ -396,16 +526,10 @@ function Painel({ conta, setConta, ir, onSair }) {
         <div className="fm-shell fm-boas-in">
           <div>
             <p className="fm-sobre">
-              <IconeT width="18" height="18" /> Trilha: {trilha.nome}
+              <IconeP width="18" height="18" /> {aberto ? "Percurso: Conhecer o projeto" : `Trilha: ${trilha.nome}`}
             </p>
             <h1 id="fm-ola">Olá, {conta.nome.split(" ")[0]}.</h1>
-            <p className="fm-boas-txt">
-              {pct === 0
-                ? "Comece pelo núcleo comum. Depois da avaliação do núcleo, a sua trilha é liberada."
-                : pct === 100
-                  ? "Você concluiu a formação. O seu certificado está disponível."
-                  : "O seu progresso fica salvo neste navegador. Continue de onde parou."}
-            </p>
+            <p className="fm-boas-txt">{textoBoas}</p>
           </div>
           <div className="fm-boas-lado">
             <Anel valor={pct} />
@@ -421,36 +545,54 @@ function Painel({ conta, setConta, ir, onSair }) {
           </div>
         </div>
         <div className="fm-shell">
-          <ol className="fm-etapas" aria-label="Etapas da formação">
-            <li className={P.aprovado(conta, NUCLEO.id) ? "feito" : "atual"}>
-              <span>{P.aprovado(conta, NUCLEO.id) ? <Check width="16" height="16" /> : "1"}</span> Núcleo comum
-            </li>
-            <li className={P.aprovado(conta, trilha.id) ? "feito" : liberada ? "atual" : ""}>
-              <span>{P.aprovado(conta, trilha.id) ? <Check width="16" height="16" /> : "2"}</span> {trilha.nome}
-            </li>
-            <li className={cert ? "feito" : ""}>
-              <span>{cert ? <Check width="16" height="16" /> : "3"}</span> Certificado
-            </li>
-          </ol>
+          {aberto ? (
+            <ol className="fm-etapas" aria-label="Etapas do percurso">
+              <li className={P.moduloLido(conta, NUCLEO) ? "feito" : "atual"}>
+                <span>{P.moduloLido(conta, NUCLEO) ? <Check width="16" height="16" /> : "1"}</span> Lições do núcleo comum
+              </li>
+              <li className={nucleoOk ? "feito" : P.moduloLido(conta, NUCLEO) ? "atual" : ""}>
+                <span>{nucleoOk ? <Check width="16" height="16" /> : "2"}</span> Avaliação
+              </li>
+              <li className={cert ? "feito" : ""}>
+                <span>{cert ? <Check width="16" height="16" /> : "3"}</span> Certificado
+              </li>
+            </ol>
+          ) : (
+            <ol className="fm-etapas" aria-label="Etapas da formação">
+              <li className={nucleoOk ? "feito" : "atual"}>
+                <span>{nucleoOk ? <Check width="16" height="16" /> : "1"}</span> Núcleo comum
+              </li>
+              <li className={P.aprovado(conta, trilha.id) ? "feito" : liberada ? "atual" : ""}>
+                <span>{P.aprovado(conta, trilha.id) ? <Check width="16" height="16" /> : "2"}</span> {trilha.nome}
+              </li>
+              <li className={cert ? "feito" : ""}>
+                <span>{cert ? <Check width="16" height="16" /> : "3"}</span> Certificado
+              </li>
+            </ol>
+          )}
         </div>
       </section>
 
       <main className="fm-shell fm-painel">
         <Modulo modulo={NUCLEO} conta={conta} ir={ir} n="1" />
-        <Modulo modulo={trilha} conta={conta} ir={ir} bloqueado={!liberada} n="2" />
+        {trilha && <Modulo modulo={trilha} conta={conta} ir={ir} bloqueado={!liberada} n="2" />}
 
         <section className={`fm-cert-card${cert ? " ok" : ""}`} aria-labelledby="fm-cert-tit">
-          <span className="fm-mod-n">3</span>
+          <span className="fm-mod-n">{aberto ? "2" : "3"}</span>
           <div>
             <h2 id="fm-cert-tit">Certificado</h2>
             <p>
-              {cert
-                ? `Parabéns. O certificado da trilha ${trilha.nome}, com ${trilha.horas} horas, está pronto para imprimir ou salvar em PDF.`
-                : `Disponível após a aprovação nas avaliações do núcleo comum e da trilha ${trilha.nome}. Carga horária: ${trilha.horas} horas.`}
+              {aberto
+                ? cert
+                  ? `Parabéns. O certificado do percurso Conhecer o projeto, com ${COMUNIDADE.horas} horas, está pronto para imprimir ou salvar em PDF.`
+                  : `Disponível após a aprovação na avaliação do núcleo comum. Carga horária: ${COMUNIDADE.horas} horas.`
+                : cert
+                  ? `Parabéns. O certificado da trilha ${trilha.nome}, com ${trilha.horas} horas, está pronto para imprimir ou salvar em PDF.`
+                  : `Disponível após a aprovação nas avaliações do núcleo comum e da trilha ${trilha.nome}. Carga horária: ${trilha.horas} horas.`}
             </p>
           </div>
           {cert ? (
-            <button type="button" className="fm-btn fm-btn--escuro" onClick={() => ir(`#/certificado/${trilha.id}`)}>
+            <button type="button" className="fm-btn fm-btn--escuro" onClick={() => ir(`#/certificado/${idCert}`)}>
               <Medalha /> Ver o certificado
             </button>
           ) : (
@@ -460,37 +602,41 @@ function Painel({ conta, setConta, ir, onSair }) {
           )}
         </section>
 
-        <section className="fm-outras" aria-labelledby="fm-outras-tit">
-          <div className="fm-outras-cab">
-            <div>
-              <h2 id="fm-outras-tit">Outras trilhas</h2>
-              <p>Se a sua função no projeto mudou, troque de trilha. O progresso de cada uma fica guardado.</p>
+        {aberto ? (
+          <Migrar conta={conta} setConta={setConta} />
+        ) : (
+          <section className="fm-outras" aria-labelledby="fm-outras-tit">
+            <div className="fm-outras-cab">
+              <div>
+                <h2 id="fm-outras-tit">Outras trilhas</h2>
+                <p>Se a sua função no projeto mudou, troque de trilha. O progresso de cada uma fica guardado.</p>
+              </div>
+              <button type="button" className="fm-btn fm-btn--linha" onClick={() => setTrocando((v) => !v)} aria-expanded={trocando}>
+                <Refazer /> {trocando ? "Cancelar" : "Trocar de trilha"}
+              </button>
             </div>
-            <button type="button" className="fm-btn fm-btn--linha" onClick={() => setTrocando((v) => !v)} aria-expanded={trocando}>
-              <Refazer /> {trocando ? "Cancelar" : "Trocar de trilha"}
-            </button>
-          </div>
-          {trocando && (
-            <ul className="fm-outras-lista">
-              {TRILHAS.filter((t) => t.id !== trilha.id).map((t) => {
-                const Ic = ICONE_TRILHA[t.id];
-                const feitoT = P.aprovado(conta, t.id);
-                return (
-                  <li key={t.id}>
-                    <button type="button" onClick={() => trocar(t.id)}>
-                      <Ic />
-                      <span>
-                        <strong>{t.nome}</strong>
-                        <span>{feitoT ? "Concluída" : t.publico}</span>
-                      </span>
-                      <Seta width="18" height="18" />
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </section>
+            {trocando && (
+              <ul className="fm-outras-lista">
+                {TRILHAS.filter((t) => t.id !== trilha.id).map((t) => {
+                  const Ic = ICONE_TRILHA[t.id];
+                  const feitoT = P.aprovado(conta, t.id);
+                  return (
+                    <li key={t.id}>
+                      <button type="button" onClick={() => trocar(t.id)}>
+                        <Ic />
+                        <span>
+                          <strong>{t.nome}</strong>
+                          <span>{feitoT ? "Concluída" : t.publico}</span>
+                        </span>
+                        <Seta width="18" height="18" />
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </section>
+        )}
       </main>
 
       <Rodape texto="Dúvidas sobre a formação: fale com o professor orientador ou com a coordenação do projeto." />

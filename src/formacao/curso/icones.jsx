@@ -53,6 +53,8 @@ export const Refazer = I(<><path d="M4 12a8 8 0 1 0 2.3-5.6" /><path d="M4 4v4h4
 export const Pino = I(<><path d="M12 21s-6.5-6-6.5-11a6.5 6.5 0 0 1 13 0c0 5-6.5 11-6.5 11z" /><circle cx="12" cy="10" r="2.3" /></>);
 
 // Ícone de cada trilha.
+export const Globo = I(<><circle cx="12" cy="12" r="9" /><path d="M3 12h18" /><path d="M12 3c2.6 2.5 3.9 5.5 3.9 9s-1.3 6.5-3.9 9c-2.6-2.5-3.9-5.5-3.9-9S9.4 5.5 12 3z" /></>);
+
 export const ICONE_TRILHA = {
   nucleo: Folha,
   multiplicador: Pessoas,
@@ -61,4 +63,5 @@ export const ICONE_TRILHA = {
   orientadores: Bussola,
   supervisores: Escola,
   direcao: Balanca,
+  comunidade: Globo,
 };

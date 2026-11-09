@@ -11,6 +11,10 @@ export const CONFIG = {
   // Número de tentativas em cada avaliação. Depois disso, a pessoa procura a coordenação.
   tentativas: 3,
 
+  // Carga horária do certificado do percurso "Conhecer o projeto", aberto à comunidade
+  // (núcleo comum e avaliação, sem código de acesso).
+  horasComunidade: 2,
+
   // Quem assina os certificados (apenas o nome impresso; não há assinatura digital).
   assinaturas: [
     { nome: "Prof. Dr. Inakã Silva Barreto", cargo: "Diretor-Geral do IFPB – Campus Santa Rita" },

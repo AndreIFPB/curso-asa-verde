@@ -1,11 +1,14 @@
 import { useRef, useState } from "react";
 import { IconClose, IconNext, IconPrev } from "./icons.jsx";
 
-export default function PhotoSpread({ photos, layout }) {
+export default function PhotoSpread({ photos, layout, visible }) {
   const dialog = useRef(null);
   const [selected, setSelected] = useState(0);
-  const current = photos[selected];
+  if (!photos.length) return null;
+  const current = photos[Math.min(selected, photos.length - 1)];
   const isCover = layout === "cover";
+  /** In the archive, "visible" limits the tiles drawn; the viewer still moves through every photo. */
+  const tiles = visible ? photos.slice(0, visible) : photos;
 
   function open(index) {
     setSelected(index);
@@ -19,10 +22,12 @@ export default function PhotoSpread({ photos, layout }) {
   return (
     <>
       <div className={`photo-spread spread-${layout}`}>
-        {photos.map((photo, index) => (
+        {tiles.map((photo, index) => (
           <button key={photo.src} type="button" className="photo-tile"
             onClick={() => open(index)} aria-label={`Ampliar fotografia. ${photo.legenda}`}>
-            <img src={photo.src} width={photo.w} height={photo.h} alt={photo.alt}
+            <img src={photo.thumb || photo.src} width={photo.w} height={photo.h} alt={photo.alt}
+              srcSet={photo.thumb ? `${photo.thumb} ${photo.tw}w, ${photo.src} ${photo.w}w` : undefined}
+              sizes={photo.thumb ? (index % 7 === 0 ? "(max-width: 700px) 100vw, 66vw" : "(max-width: 700px) 50vw, 33vw") : undefined}
               loading={isCover ? "eager" : "lazy"} fetchPriority={isCover && index === 1 ? "high" : undefined} />
             <span className="tile-caption">{photo.label || photo.legenda}</span>
             <span className="expand-mark" aria-hidden="true">⤢</span>
@@ -35,7 +40,7 @@ export default function PhotoSpread({ photos, layout }) {
           if (event.key === "ArrowRight") move(1);
         }}>
         <div className="viewer-top">
-          <span>Acervo fotográfico · Asa Verde</span>
+          <span>{current.unidade ? `${current.unidade}, ${current.ano}` : "Acervo fotográfico · Asa Verde"}</span>
           <button type="button" onClick={() => dialog.current.close()} autoFocus><IconClose /> Fechar</button>
         </div>
         <figure>

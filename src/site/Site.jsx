@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalS
 import "./site.css";
 import { AreaEstagiario, Cabecalho, Inicio } from "./Portal.jsx";
 import PhotoSpread from "./PhotoSpread.jsx";
+import { ACERVO } from "./galeria.js";
 import {
   LINKS,
   CAPITULOS,
@@ -18,7 +19,6 @@ import {
   COLUNAS_RESULTADOS,
   MESES,
   VOZES,
-  GALERIA,
   IMPRENSA,
   RELATORIOS,
   FICHA,
@@ -750,13 +750,74 @@ function Vozes() {
 
 /* ───────────────────────── 07 · Galeria ───────────────────────── */
 
+const GAL_PASSO = 18;
+const GAL_ANOS = ["2026", "2025"];
+
+/** Na grade do acervo, a 1ª foto de cada bloco de 7 ocupa duas colunas e a 2ª, duas linhas.
+ *  Reordena com pouca troca para que essas posições recebam fotos horizontais e verticais. */
+function arranjarAcervo(lista) {
+  const resto = [...lista];
+  const saida = [];
+  while (resto.length) {
+    const pos = saida.length % 7;
+    let i = 0;
+    if (pos === 0) i = Math.max(0, resto.findIndex(f => f.w > f.h));
+    if (pos === 1) i = Math.max(0, resto.findIndex(f => f.w < f.h));
+    saida.push(resto.splice(i, 1)[0]);
+  }
+  return saida;
+}
+
 function Galeria() {
+  const [ano, setAno] = useState("2026");
+  const [unidade, setUnidade] = useState("");
+  const [limite, setLimite] = useState(GAL_PASSO);
+  const doAno = useMemo(() => ACERVO.filter(f => f.ano === ano), [ano]);
+  const unidades = useMemo(
+    () => [...new Set(doAno.map(f => f.unidade).filter(Boolean))].sort((a, b) => a.localeCompare(b, "pt-BR")),
+    [doAno]
+  );
+  const fotos = useMemo(() => arranjarAcervo(unidade ? doAno.filter(f => f.unidade === unidade) : doAno), [doAno, unidade]);
+  const mostradas = Math.min(limite, fotos.length);
+
+  function escolherAno(valor) {
+    setAno(valor);
+    setUnidade("");
+    setLimite(GAL_PASSO);
+  }
+
+  function escolherUnidade(valor) {
+    setUnidade(valor);
+    setLimite(GAL_PASSO);
+  }
+
   return (
     <section className="ch gallery-page" id="galeria" aria-labelledby="gal-tit">
       <div className="shell">
-        <Abertura nome="Acervo fotográfico · 2026" titulo={<span id="gal-tit">As escolas em imagens</span>}
-          lead="Das rodas de conversa ao plantio, os registros das equipes mostram de perto o trabalho com as turmas. Selecione uma fotografia para vê-la por inteiro." />
-        <PhotoSpread photos={GALERIA} layout="archive" />
+        <Abertura nome="Acervo fotográfico · 2025 e 2026" titulo={<span id="gal-tit">As escolas em imagens</span>}
+          lead="Das rodas de conversa ao plantio, os registros das equipes mostram de perto o trabalho com as turmas nos dois ciclos do projeto. Escolha o ano e a unidade e selecione uma fotografia para vê-la por inteiro." />
+        <div className="gal-filtros">
+          <div className="cycle-select" role="group" aria-label="Ano do acervo">
+            {GAL_ANOS.map(valor => (
+              <button key={valor} type="button" aria-pressed={valor === ano} onClick={() => escolherAno(valor)}>{valor}</button>
+            ))}
+          </div>
+          <label className="gal-unidade">
+            <span>Unidade</span>
+            <select value={unidade} onChange={e => escolherUnidade(e.target.value)}>
+              <option value="">Todas as unidades</option>
+              {unidades.map(u => <option key={u} value={u}>{u}</option>)}
+            </select>
+          </label>
+          <p className="gal-conta" aria-live="polite">{fotos.length} fotografias</p>
+        </div>
+        <PhotoSpread key={`${ano}-${unidade}`} photos={fotos} visible={limite} layout="archive" />
+        {mostradas < fotos.length && (
+          <div className="gal-mais">
+            <p>Mostrando {mostradas} de {fotos.length}</p>
+            <button type="button" className="gal-mais-btn" onClick={() => setLimite(l => l + GAL_PASSO)}>Mostrar mais fotografias</button>
+          </div>
+        )}
       </div>
     </section>
   );

@@ -3,6 +3,7 @@ import "./site.css";
 import { AreaEstagiario, Cabecalho, Inicio } from "./Portal.jsx";
 import PhotoSpread from "./PhotoSpread.jsx";
 import { ACERVO } from "./galeria.js";
+import { abrirPreferenciasCookies, clarityAtivo, registrarEvento } from "../analytics.js";
 import {
   LINKS,
   CAPITULOS,
@@ -781,12 +782,14 @@ function Galeria() {
   const mostradas = Math.min(limite, fotos.length);
 
   function escolherAno(valor) {
+    registrarEvento(`galeria_${valor}`);
     setAno(valor);
     setUnidade("");
     setLimite(GAL_PASSO);
   }
 
   function escolherUnidade(valor) {
+    if (valor) registrarEvento("galeria_filtro_unidade");
     setUnidade(valor);
     setLimite(GAL_PASSO);
   }
@@ -1082,6 +1085,7 @@ function Rodape({ onFormacao }) {
         <p className="rod-base">
           <span>Projeto Asa Verde · Santa Rita – PB</span>
           <span>Fotografias: equipes de estagiários e equipe de Mídia do projeto</span>
+          {clarityAtivo && <button type="button" className="rod-cookies" onClick={abrirPreferenciasCookies}>Preferências de cookies</button>}
           <span>{new Date().getFullYear()}</span>
         </p>
       </div>

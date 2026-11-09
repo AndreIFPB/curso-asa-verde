@@ -1,5 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import Site from "./site/Site.jsx";
+import { Medicao } from "./Medicao.jsx";
 
 // A formação só é carregada quando alguém abre /formacao.
 // /formacao abre o curso atual; /formacao/2026 mantém o curso anterior
@@ -63,21 +64,16 @@ export default function App() {
     window.scrollTo(0, 0);
   }, []);
 
-  if (rota === "formacao") {
-    return (
-      <Suspense fallback={carregando}>
-        <Curso navigate={navigate} />
-      </Suspense>
-    );
-  }
+  let conteudo = <Site navigate={navigate} />;
+  if (rota === "formacao") conteudo = <Suspense fallback={carregando}><Curso navigate={navigate} /></Suspense>;
+  if (rota === "formacao-2026") conteudo = <Suspense fallback={carregando}><FormacaoPage navigate={navigate} /></Suspense>;
 
-  if (rota === "formacao-2026") {
-    return (
-      <Suspense fallback={carregando}>
-        <FormacaoPage navigate={navigate} />
-      </Suspense>
-    );
-  }
-
-  return <Site navigate={navigate} />;
+  // A mesma estrutura em todas as rotas mantém a medição montada ao navegar.
+  // No curso, o Clarity mascara todo o conteúdo (nomes em certificados, respostas).
+  return (
+    <div style={{ display: "contents" }} data-clarity-mask={rota === "site" ? undefined : "True"}>
+      {conteudo}
+      <Medicao rota={rota} />
+    </div>
+  );
 }

@@ -1,0 +1,37 @@
+/* Aviso de cookies do Microsoft Clarity. Fica fora do .pg, por isso traz as próprias cores. */
+.aviso-cookies, .aviso-cookies * { box-sizing: border-box; }
+.aviso-cookies {
+  position: fixed;
+  z-index: 60;
+  left: clamp(.75rem, 2vw, 1.5rem);
+  bottom: clamp(.75rem, 2vw, 1.5rem);
+  width: min(30rem, calc(100% - 1.5rem));
+  padding: 1.15rem 1.25rem 1.2rem;
+  border-radius: 1rem;
+  color: #f3f6ec;
+  background: #0d352c;
+  box-shadow: 0 18px 40px -18px rgb(5 26 19 / .55);
+  font: 400 .95rem/1.5 "Segoe UI", Arial, sans-serif;
+}
+.aviso-cookies h2 { margin: 0 0 .35rem; color: #e0f391; font: 650 1.05rem/1.3 "Segoe UI", Arial, sans-serif; }
+.aviso-cookies p { margin: 0; }
+.aviso-cookies-link { display: flex; flex-wrap: wrap; gap: .25rem 1rem; margin-top: .55rem !important; font-size: .88rem; }
+.aviso-cookies-link a { color: #fff; text-underline-offset: .2em; }
+.aviso-cookies-link span { color: #b9c8bd; }
+.aviso-cookies-acoes { display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; margin-top: 1rem; }
+.aviso-cookies-acoes button {
+  min-height: 44px;
+  border-radius: 2rem;
+  border: 1px solid #b9c8bd;
+  color: #fff;
+  background: transparent;
+  font: 650 1rem/1.2 "Segoe UI", Arial, sans-serif;
+  cursor: pointer;
+}
+.aviso-cookies-acoes button:hover { border-color: #fff; }
+.aviso-cookies-acoes .aceitar { border-color: #e0f391; color: #0d352c; background: #e0f391; }
+.aviso-cookies-acoes .aceitar:hover { background: #ecf8b4; }
+.aviso-cookies a:focus-visible, .aviso-cookies button:focus-visible { outline: 3px solid #e0f391; outline-offset: 3px; }
+@media (max-width: 520px) {
+  .aviso-cookies { left: .5rem; bottom: .5rem; width: calc(100% - 1rem); }
+}

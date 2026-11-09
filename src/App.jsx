@@ -1,19 +1,30 @@
 import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import Site from "./site/Site.jsx";
 
-// A plataforma de formação só é carregada quando alguém abre /formacao.
+// A formação só é carregada quando alguém abre /formacao.
+// /formacao abre o curso atual; /formacao/2026 mantém o curso anterior
+// para quem precisa reimprimir o certificado emitido nele.
+const Curso = lazy(() => import("./formacao/curso/Curso.jsx"));
 const FormacaoPage = lazy(() => import("./formacao/FormacaoPage.jsx"));
 
 const TITULOS = {
   site: "Projeto Asa Verde | Educação ambiental nas escolas de Santa Rita – PB",
-  formacao: "Formação dos multiplicadores | Projeto Asa Verde",
+  formacao: "Formação Asa Verde | Projeto Asa Verde",
+  "formacao-2026": "Formação dos multiplicadores 2026 | Projeto Asa Verde",
 };
 
 function rotaAtual() {
   const caminho = window.location.pathname.replace(/\/+$/, "") || "/";
+  if (caminho === "/formacao/2026") return "formacao-2026";
   if (caminho === "/formacao" || caminho === "/treinamento" || caminho === "/curso") return "formacao";
   return "site";
 }
+
+const carregando = (
+  <div style={{ minHeight: "100vh", display: "grid", placeItems: "center", background: "#faf8ef", color: "#112f27", fontFamily: '"Segoe UI", Arial, sans-serif' }}>
+    Carregando a formação…
+  </div>
+);
 
 export default function App() {
   const [rota, setRota] = useState(() => {
@@ -42,7 +53,8 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    document.title = TITULOS[rota];
+    // O curso atual define o próprio título conforme a tela aberta.
+    if (rota !== "formacao") document.title = TITULOS[rota];
   }, [rota]);
 
   const navigate = useCallback((destino) => {
@@ -53,7 +65,15 @@ export default function App() {
 
   if (rota === "formacao") {
     return (
-      <Suspense fallback={<div style={{ padding: "4rem", textAlign: "center", fontFamily: "system-ui" }}>Carregando a formação…</div>}>
+      <Suspense fallback={carregando}>
+        <Curso navigate={navigate} />
+      </Suspense>
+    );
+  }
+
+  if (rota === "formacao-2026") {
+    return (
+      <Suspense fallback={carregando}>
         <FormacaoPage navigate={navigate} />
       </Suspense>
     );

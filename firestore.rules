@@ -1,0 +1,78 @@
+rules_version = '2';
+
+// Regras do site do Projeto Asa Verde: depoimentos, avaliações das páginas e pesquisa.
+// Visitantes entram com login anônimo; a moderação exige o login Google do administrador.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function admin() {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && request.auth.token.email in ['andre.silvajp@gmail.com'];
+    }
+
+    function visitante() {
+      return request.auth != null;
+    }
+
+    function texto(valor, minimo, maximo) {
+      return valor is string && valor.size() >= minimo && valor.size() <= maximo;
+    }
+
+    function opcional(dados, campo, maximo) {
+      return !(campo in dados) || texto(dados[campo], 0, maximo);
+    }
+
+    // Depoimentos: qualquer visitante envia; só aparecem no site depois de aprovados.
+    match /depoimentos/{id} {
+      allow read: if resource.data.status == 'aprovado' || admin();
+      allow create: if visitante()
+        && request.resource.data.keys().hasOnly(['nome', 'funcao', 'unidade', 'texto', 'autorizacao', 'status', 'criadoEm'])
+        && request.resource.data.keys().hasAll(['nome', 'funcao', 'texto', 'autorizacao', 'status', 'criadoEm'])
+        && texto(request.resource.data.nome, 2, 80)
+        && texto(request.resource.data.funcao, 2, 60)
+        && opcional(request.resource.data, 'unidade', 90)
+        && texto(request.resource.data.texto, 30, 1200)
+        && request.resource.data.autorizacao == true
+        && request.resource.data.status == 'pendente'
+        && request.resource.data.criadoEm == request.time;
+      allow update, delete: if admin();
+    }
+
+    // "Esta página foi útil?": um voto por visitante em cada página.
+    match /avaliacoes/{id} {
+      allow create: if visitante()
+        && request.resource.data.keys().hasOnly(['pagina', 'util', 'comentario', 'criadoEm'])
+        && request.resource.data.keys().hasAll(['pagina', 'util', 'criadoEm'])
+        && request.resource.data.pagina is string
+        && request.resource.data.pagina.matches('^[a-z0-9-]{1,40}$')
+        && id == request.auth.uid + '_' + request.resource.data.pagina
+        && request.resource.data.util is bool
+        && opcional(request.resource.data, 'comentario', 600)
+        && request.resource.data.criadoEm == request.time;
+      // Quem votou pode acrescentar um comentário, uma única vez.
+      allow update: if visitante()
+        && id == request.auth.uid + '_' + resource.data.pagina
+        && !('comentario' in resource.data)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['comentario'])
+        && texto(request.resource.data.comentario, 1, 600);
+      allow read, delete: if admin();
+    }
+
+    // Pesquisa de percepção: uma resposta por visitante.
+    match /pesquisa/{uid} {
+      allow create: if visitante()
+        && uid == request.auth.uid
+        && request.resource.data.keys().hasOnly(['perfil', 'unidade', 'mudanca', 'avaliacao', 'continuidade', 'comentario', 'criadoEm'])
+        && request.resource.data.keys().hasAll(['perfil', 'mudanca', 'avaliacao', 'continuidade', 'criadoEm'])
+        && request.resource.data.perfil in ['responsavel', 'professor', 'gestor', 'estagiario', 'comunidade']
+        && opcional(request.resource.data, 'unidade', 90)
+        && request.resource.data.mudanca in ['muita', 'alguma', 'nenhuma', 'nao_sei']
+        && request.resource.data.avaliacao in ['otima', 'boa', 'regular', 'ruim', 'nao_conheco']
+        && request.resource.data.continuidade in ['sim', 'nao', 'nao_sei']
+        && opcional(request.resource.data, 'comentario', 800)
+        && request.resource.data.criadoEm == request.time;
+      allow read, delete: if admin();
+    }
+  }
+}

@@ -7,6 +7,8 @@ import { Medicao } from "./Medicao.jsx";
 // para quem precisa reimprimir o certificado emitido nele.
 const Curso = lazy(() => import("./formacao/curso/Curso.jsx"));
 const FormacaoPage = lazy(() => import("./formacao/FormacaoPage.jsx"));
+// Moderação de depoimentos e respostas do público (acesso restrito, fora do menu).
+const Moderacao = lazy(() => import("./interacao/Moderacao.jsx"));
 
 const TITULOS = {
   site: "Projeto Asa Verde | Educação ambiental nas escolas de Santa Rita – PB",
@@ -17,6 +19,7 @@ const TITULOS = {
 function rotaAtual() {
   const caminho = window.location.pathname.replace(/\/+$/, "") || "/";
   if (caminho === "/formacao/2026") return "formacao-2026";
+  if (caminho === "/moderacao") return "moderacao";
   if (caminho === "/formacao" || caminho === "/treinamento" || caminho === "/curso") return "formacao";
   return "site";
 }
@@ -55,7 +58,7 @@ export default function App() {
 
   useEffect(() => {
     // O curso atual define o próprio título conforme a tela aberta.
-    if (rota !== "formacao") document.title = TITULOS[rota];
+    if (rota !== "formacao" && rota !== "moderacao") document.title = TITULOS[rota];
   }, [rota]);
 
   const navigate = useCallback((destino) => {
@@ -67,13 +70,13 @@ export default function App() {
   let conteudo = <Site navigate={navigate} />;
   if (rota === "formacao") conteudo = <Suspense fallback={carregando}><Curso navigate={navigate} /></Suspense>;
   if (rota === "formacao-2026") conteudo = <Suspense fallback={carregando}><FormacaoPage navigate={navigate} /></Suspense>;
+  if (rota === "moderacao") conteudo = <Suspense fallback={carregando}><Moderacao navigate={navigate} /></Suspense>;
 
-  // A mesma estrutura em todas as rotas mantém a medição montada ao navegar.
-  // No curso, o Clarity mascara todo o conteúdo (nomes em certificados, respostas).
+  // A medição fica na mesma posição em todas as rotas, para não ser remontada ao navegar.
   return (
-    <div style={{ display: "contents" }} data-clarity-mask={rota === "site" ? undefined : "True"}>
+    <>
       {conteudo}
-      <Medicao rota={rota} />
-    </div>
+      <Medicao />
+    </>
   );
 }

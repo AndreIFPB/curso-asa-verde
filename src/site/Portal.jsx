@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { CAPITULOS, DESTAQUES, EIXOS, EVOLUCAO, GALERIA, INFANTIL, LINKS, RELATORIOS, VOZES } from "./data.js";
 import { IconArrow, IconCap, IconChart, IconClipboard, IconClose, IconDownload, IconExternal, IconMenu } from "./icons.jsx";
 import PhotoSpread from "./PhotoSpread.jsx";
+import { ChamadaParticipe } from "../interacao/Interacao.jsx";
 import "./portal.css";
 
 const primaryLinks = [["galeria", "Fotografias"], ["impacto", "Impacto"], ["vozes", "Vozes"], ["relatorios", "Relatórios"]];
@@ -50,6 +51,7 @@ export function Cabecalho({ selected, onFormacao }) {
         <a href="#inicio">Início <IconArrow /></a>
         {CAPITULOS.map(c => <a key={c.id} href={`#${c.id}`}>{c.nome} <IconArrow /></a>)}
         <a href="#equipe">Quem faz o Asa Verde <IconArrow /></a>
+        <a href="#participe">Participe <IconArrow /></a>
         <a href="#estagiario">Área do estagiário <IconCap /></a>
       </nav>}
     </header>
@@ -235,5 +237,5 @@ function RelatoriosHome() {
 }
 
 export function Inicio() {
-  return <><Capa /><Impacto /><PrimeiraInfancia /><Comunidade /><RelatoriosHome /></>;
+  return <><Capa /><Impacto /><PrimeiraInfancia /><Comunidade /><ChamadaParticipe /><RelatoriosHome /></>;
 }

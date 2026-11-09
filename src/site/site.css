@@ -2762,19 +2762,6 @@ html:has(.pg) {
   color: rgba(255, 255, 255, 0.5);
 }
 
-.pg .rod-cookies {
-  padding: 0;
-  border: 0;
-  background: none;
-  color: rgba(255, 255, 255, 0.78);
-  font: inherit;
-  text-decoration: underline;
-  text-underline-offset: 0.2em;
-  cursor: pointer;
-}
-
-.pg .rod-cookies:hover { color: #fff; }
-
 @media (max-width: 900px) {
   .pg .rod-cols {
     grid-template-columns: 1fr 1fr;

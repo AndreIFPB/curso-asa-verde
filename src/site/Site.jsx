@@ -3,7 +3,8 @@ import "./site.css";
 import { AreaEstagiario, Cabecalho, Inicio } from "./Portal.jsx";
 import PhotoSpread from "./PhotoSpread.jsx";
 import { ACERVO } from "./galeria.js";
-import { abrirPreferenciasCookies, clarityAtivo, registrarEvento } from "../analytics.js";
+import { DepoimentosPublicados, PaginaUtil, Participe } from "../interacao/Interacao.jsx";
+import { PAGINAS_AVALIADAS } from "../interacao/servicos.js";
 import {
   LINKS,
   CAPITULOS,
@@ -744,6 +745,7 @@ function Vozes() {
             </span>
           </div>
         </div>
+        <DepoimentosPublicados />
       </div>
     </section>
   );
@@ -782,14 +784,12 @@ function Galeria() {
   const mostradas = Math.min(limite, fotos.length);
 
   function escolherAno(valor) {
-    registrarEvento(`galeria_${valor}`);
     setAno(valor);
     setUnidade("");
     setLimite(GAL_PASSO);
   }
 
   function escolherUnidade(valor) {
-    if (valor) registrarEvento("galeria_filtro_unidade");
     setUnidade(valor);
     setLimite(GAL_PASSO);
   }
@@ -1058,6 +1058,9 @@ function Rodape({ onFormacao }) {
                 </a>
               </li>
               <li>
+                <a href="#participe">Participe: depoimentos e pesquisa</a>
+              </li>
+              <li>
                 <a href="/formacao" onClick={onFormacao}>
                   Formação dos multiplicadores
                 </a>
@@ -1085,7 +1088,6 @@ function Rodape({ onFormacao }) {
         <p className="rod-base">
           <span>Projeto Asa Verde · Santa Rita – PB</span>
           <span>Fotografias: equipes de estagiários e equipe de Mídia do projeto</span>
-          {clarityAtivo && <button type="button" className="rod-cookies" onClick={abrirPreferenciasCookies}>Preferências de cookies</button>}
           <span>{new Date().getFullYear()}</span>
         </p>
       </div>
@@ -1096,7 +1098,8 @@ function Rodape({ onFormacao }) {
 /* ───────────────────────── Página ───────────────────────── */
 
 const chapters = { projeto: Projeto, numeros: Numeros, eixos: Eixos, territorio: Territorio,
-  tempo: Tempo, vozes: Vozes, galeria: Galeria, imprensa: Imprensa, relatorios: Relatorios, equipe: Equipe, estagiario: AreaEstagiario };
+  tempo: Tempo, vozes: Vozes, galeria: Galeria, imprensa: Imprensa, relatorios: Relatorios, equipe: Equipe, estagiario: AreaEstagiario,
+  participe: Participe };
 const fieldSections = new Set([...EIXOS.map(e => e.id), "infantil"]);
 
 function subscribeHash(update) {
@@ -1112,7 +1115,8 @@ export default function Site({ navigate }) {
   const hash = useSyncExternalStore(subscribeHash, readHash, readHash);
   const page = fieldSections.has(hash) ? "eixos" : hash;
   const Chapter = Object.hasOwn(chapters, page) ? chapters[page] : null;
-  const title = page === "estagiario" ? "Área do estagiário" : CAPITULOS.find(c => c.id === page)?.nome || "Quem faz o Asa Verde";
+  const title = page === "estagiario" ? "Área do estagiário" : page === "participe" ? "Participe"
+    : CAPITULOS.find(c => c.id === page)?.nome || "Quem faz o Asa Verde";
   const content = useRef(null);
 
   useLayoutEffect(() => {
@@ -1140,6 +1144,7 @@ export default function Site({ navigate }) {
           <div className="chapter-view">
             <nav className="shell breadcrumb" aria-label="Caminho da página"><a href="#inicio">Início</a><IconNext /><span aria-current="page">{title}</span></nav>
             <Chapter key={page} onFormacao={onFormacao} />
+            {Object.hasOwn(PAGINAS_AVALIADAS, page) && <PaginaUtil key={page} pagina={page} />}
           </div>
         ) : <Inicio />}
         <Realizacao />

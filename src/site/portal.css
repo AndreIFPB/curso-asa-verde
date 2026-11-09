@@ -150,7 +150,7 @@ html:has(.photo-viewer[open]) { overflow: hidden; }
   .pg .brand span { font-size: 1.2rem; }
   .pg .brand small { font-size: .62rem; }
   .pg .mast-inner, .pg .mast-tools { gap: .35rem; }
-  .pg .training { font-size: .92rem; padding: .45rem .6rem; }
+  .pg .training { font-size: .92rem; padding: .45rem .6rem; white-space: nowrap; }
   .pg .training svg { width: 16px; }
   .pg .edition-heading, .pg .impact-composition, .pg .childhood, .pg .community-layout { grid-template-columns: 1fr; }
   .pg .edition-heading { gap: 1.2rem; padding-block: 1.8rem; }

@@ -1069,7 +1069,7 @@ export default function Site({ navigate }) {
         event.preventDefault();
         content.current?.focus();
       }}>Pular para o conteúdo</a>
-      <Cabecalho key={hash} selected={page} />
+      <Cabecalho key={hash} selected={page} onFormacao={onFormacao} />
       <main id="conteudo" ref={content} tabIndex={-1}>
         {Chapter ? (
           <div className="chapter-view">

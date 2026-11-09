@@ -7,7 +7,7 @@ import "./portal.css";
 const primaryLinks = [["galeria", "Fotografias"], ["impacto", "Impacto"], ["vozes", "Vozes"], ["relatorios", "Relatórios"]];
 const format = new Intl.NumberFormat("pt-BR");
 
-export function Cabecalho({ selected }) {
+export function Cabecalho({ selected, onFormacao }) {
   const [open, setOpen] = useState(false);
   const header = useRef(null);
   const toggle = useRef(null);
@@ -42,7 +42,7 @@ export function Cabecalho({ selected }) {
           {primaryLinks.map(([id, name]) => <a key={id} href={`#${id}`} aria-current={selected === id ? "page" : undefined}>{name}</a>)}
         </nav>
         <div className="mast-tools">
-          <a className="training" href="#estagiario" aria-current={selected === "estagiario" ? "page" : undefined}><IconCap /> Área do estagiário</a>
+          <a className="training" href="/formacao" onClick={onFormacao}><IconCap /> Curso de formação</a>
           <button type="button" ref={toggle} className="menu-toggle" aria-label={open ? "Fechar menu" : "Abrir menu de navegação"} aria-expanded={open} aria-controls="all-links" onClick={() => setOpen(!open)}>{open ? <IconClose /> : <IconMenu />}</button>
         </div>
       </div>
@@ -64,7 +64,7 @@ export function AreaEstagiario({ onFormacao }) {
         <article>
           <IconCap />
           <h2>Curso de formação</h2>
-          <p>Acesse os módulos de formação dos multiplicadores e faça as avaliações do curso.</p>
+          <p>Núcleo comum sobre o Asa Verde e trilhas para multiplicadores, equipes de Mídia e de Planejamento, professores orientadores, supervisores e direção das unidades, com avaliações e certificado.</p>
           <a className="btn btn--tinta" href="/formacao" onClick={onFormacao}>Acessar o curso <IconArrow /></a>
         </article>
         <article>
